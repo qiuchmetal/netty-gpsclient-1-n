@@ -1,6 +1,7 @@
 package com.test.nettytest.client;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,8 +29,7 @@ public class NettyClientUtil
 	/**
 	 * Netty Client 的启动参数 每条线程要启动的连接数（1:N 方式）
 	 */
-	public static final int PER_THREAD_CONNETIONS = Integer
-			.parseInt(getPropertiesValueByKey("netty-client-perthreadconnection"));
+	public static final int PER_THREAD_CONNETIONS = Integer.parseInt(getPropertiesValueByKey("netty-client-perthreadconnection"));
 	/**
 	 * Netty Client 的启动参数 运行方式（1:1 或者 1:N）
 	 */
@@ -45,16 +45,14 @@ public class NettyClientUtil
 	/**
 	 * 心跳超时
 	 */
-	public static final int HEARTBEAT_TIMEOUT = Integer
-			.parseInt(getPropertiesValueByKey("netty-client-heartbeattimeout"));
+	public static final int HEARTBEAT_TIMEOUT = Integer.parseInt(getPropertiesValueByKey("netty-client-heartbeattimeout"));
 	/**
 	 * 发送异常信息间隔
 	 */
-	public static final int ABNORMAL_INTERVAL = Integer
-			.parseInt(getPropertiesValueByKey("netty-client-abnormalinterval"));
-			/**
-			 * 注册信息
-			 */
+	public static final int ABNORMAL_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-abnormalinterval"));
+	/**
+	 * 注册信息
+	 */
 	//	public static final String LOGIN_STRING = "faf5001000a7002002ff000000000000000051800001004253313131313144303030305a0000000100000000000000010700000000000000000000000000000000017022311285100000000000000008806ffff00000307543136313232373931000000000000000000000000000000000000000000000042533131313131440000000000000000000000000000000000000000000000000003000007000000000000000000000000000000000cc0";
 	//	public static final byte[] LOGIN_BYTES = { -6, -11, 0, 16, 0, -89, -43, 32, 2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 81, -128,
 	//			0, 1, 0, 66, 83, 49, 49, 49, 49, 49, 68, 48, 48, 48, 48, 90, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
@@ -139,7 +137,7 @@ public class NettyClientUtil
 		int len = hexString.length();
 		if (len <= 0 || len % 2 != 0) // 长度为0或基数时，不合法
 		{
-//			throw new Exception("输入的16进制字符串有误！ ");
+			//			throw new Exception("输入的16进制字符串有误！ ");
 			return null;
 		}
 
@@ -170,13 +168,27 @@ public class NettyClientUtil
 		//
 		//		return "";
 
+		//获取 jar 包所在目录
+		String jarPath = (new File(NettyClientUtil.class.getProtectionDomain().getCodeSource().getLocation().getFile())).getParent();
+		//				System.out.println(jarPath);
+		//				return "";
+		String filePath = jarPath + System.getProperty("file.separator") + "netty-client.properties";
+		//				System.out.println(filePath);
+
+		//				return "";
+
 		Properties pps = new Properties();
 		InputStream in = null;
 		try
 		{
-			in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
-//			in = new BufferedInputStream(
-//					new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
+			//这个方式是获取在 jar 包内的根目录下的配置文件方式
+			//in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
+
+			//这个方式是获取与 jar 包同路径下的配置文件方式
+			//in = new BufferedInputStream(new FileInputStream(filePath));
+
+			//这个方法可以把配置文件放在工程的 resources 目录下
+			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
 			pps.load(in);
 			return pps.getProperty(key);
 		}

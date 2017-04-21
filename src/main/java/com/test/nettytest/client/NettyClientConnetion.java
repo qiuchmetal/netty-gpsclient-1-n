@@ -18,7 +18,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
-public class NettyClientInSingleConnetion //implements Runnable
+public class NettyClientConnetion
 {
 	/**
 	 * 当前连接线程的一些信息
@@ -40,7 +40,7 @@ public class NettyClientInSingleConnetion //implements Runnable
 //	public int disconnectionCount; //未连接的连接数
 //	public int connecting; //正在进行连接的数量
 
-	public NettyClientInSingleConnetion(List<ThreadInfo> threadInfoList)
+	public NettyClientConnetion(List<ThreadInfo> threadInfoList)
 	{
 //		this.disconnectionCount = this.CONNECTION_COUNT;
 //		this.connecting = 0;
@@ -67,7 +67,7 @@ public class NettyClientInSingleConnetion //implements Runnable
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
 //				ch.pipeline().addLast(new LoginHandler(threadInfo, clientCommand, NettyClientInSingleConnetion.this));
-				ch.pipeline().addLast(new LoginHandler(threadInfo, NettyClientInSingleConnetion.this));
+				ch.pipeline().addLast(new LoginHandler(threadInfo, NettyClientConnetion.this));
 			}
 		});
 

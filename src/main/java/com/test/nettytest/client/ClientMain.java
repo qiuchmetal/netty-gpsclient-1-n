@@ -43,6 +43,6 @@ public class ClientMain
 		//		executor.shutdown();
 
 		for (int i = 0; i < NettyClientUtil.THREAD_POOL_SIZE; i++)
-			(new NettyClientInSingleConnetion(threadInfoList)).start();;
+			(new NettyClientConnetion(threadInfoList)).start();;
 	}
 }

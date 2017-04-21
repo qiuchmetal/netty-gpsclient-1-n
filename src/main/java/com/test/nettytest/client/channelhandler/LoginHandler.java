@@ -5,7 +5,7 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.NettyClientCommand;
-import com.test.nettytest.client.NettyClientInSingleConnetion;
+import com.test.nettytest.client.NettyClientConnetion;
 import com.test.nettytest.client.NettyClientUtil;
 import com.test.nettytest.client.ThreadInfoFile;
 import com.test.nettytest.client.pojo.ThreadInfo;
@@ -35,16 +35,16 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 	/**
 	 * 断开重连需要用到的
 	 */
-	private NettyClientInSingleConnetion client;
+	private NettyClientConnetion client;
 
-	public LoginHandler(ThreadInfo threadInfo, NettyClientCommand clientCommand, NettyClientInSingleConnetion client)
+	public LoginHandler(ThreadInfo threadInfo, NettyClientCommand clientCommand, NettyClientConnetion client)
 	{
 		this.threadInfo = threadInfo;
 		this.clientCommand = clientCommand;
 		this.client = client;
 	}
 	
-	public LoginHandler(ThreadInfo threadInfo, NettyClientInSingleConnetion client)
+	public LoginHandler(ThreadInfo threadInfo, NettyClientConnetion client)
 	{
 		this.threadInfo = threadInfo;
 		this.client = client;
