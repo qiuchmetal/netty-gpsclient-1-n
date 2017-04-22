@@ -30,6 +30,10 @@ public class NettyClientUtil
 	 */
 	public static final int PER_THREAD_CONNETIONS = Integer.parseInt(getPropertiesValueByKey("netty-client-perthreadconnection"));
 	/**
+	 * 车号生成段
+	 */
+	public static final String BUSID_SEGMENT = getPropertiesValueByKey("netty-client-busidsegment").toUpperCase();
+	/**
 	 * 发送注册信息间隔
 	 */
 	public static final int LOGIN_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-logininterval"));
