@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.pojo.ThreadInfo;
 import com.test.nettytest.client.task.CreateThreadInfoFileTask;
+import com.test.nettytest.client.util.NettyClientUtil;
 
 public class ClientMain
 {

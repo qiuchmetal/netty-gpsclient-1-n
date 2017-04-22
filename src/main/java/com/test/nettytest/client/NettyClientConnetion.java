@@ -5,9 +5,9 @@ import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.channelhandler.LoginHandler;
 import com.test.nettytest.client.pojo.ThreadInfo;
+import com.test.nettytest.client.util.NettyClientUtil;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
@@ -31,23 +31,23 @@ public class NettyClientConnetion
 	/**
 	 * 指令生成类
 	 */
-//	private NettyClientCommand clientCommand;
+	//	private NettyClientCommand clientCommand;
 
-//	private Channel channel;
+	//	private Channel channel;
 	private Bootstrap bootstrap;
-	
-	private final int CONNECTION_COUNT = 10; //需要保持的连接数
-//	public int disconnectionCount; //未连接的连接数
-//	public int connecting; //正在进行连接的数量
+
+	private final int CONNECTION_COUNT = NettyClientUtil.PER_THREAD_CONNETIONS; //需要保持的连接数
+	//	public int disconnectionCount; //未连接的连接数
+	//	public int connecting; //正在进行连接的数量
 
 	public NettyClientConnetion(List<ThreadInfo> threadInfoList)
 	{
-//		this.disconnectionCount = this.CONNECTION_COUNT;
-//		this.connecting = 0;
+		//		this.disconnectionCount = this.CONNECTION_COUNT;
+		//		this.connecting = 0;
 		this.threadInfo = new ThreadInfo();
 		//记录线程开始时间
 		this.threadInfo.setStartTime(System.currentTimeMillis());
-//		this.clientCommand = new NettyClientCommand();
+		//		this.clientCommand = new NettyClientCommand();
 		//把当前创建的线程加入列表
 		threadInfoList.add(threadInfo);
 	}
@@ -66,7 +66,7 @@ public class NettyClientConnetion
 			protected void initChannel(SocketChannel ch) throws Exception
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
-//				ch.pipeline().addLast(new LoginHandler(threadInfo, clientCommand, NettyClientInSingleConnetion.this));
+				//				ch.pipeline().addLast(new LoginHandler(threadInfo, clientCommand, NettyClientInSingleConnetion.this));
 				ch.pipeline().addLast(new LoginHandler(threadInfo, NettyClientConnetion.this));
 			}
 		});
@@ -74,13 +74,11 @@ public class NettyClientConnetion
 		//记录线程ID
 		threadInfo.setThreadID(Thread.currentThread().getName());
 
-//		//记录线程开始时间
-//		threadInfo.setStartTime(System.currentTimeMillis());
-		
-		
-		for(int i=0;i<CONNECTION_COUNT;i++)
+		//		//记录线程开始时间
+		//		threadInfo.setStartTime(System.currentTimeMillis());
+
+		for (int i = 0; i < CONNECTION_COUNT; i++)
 			doConnect();
-		
 
 		//		ChannelFuture f = null;
 		//
@@ -118,11 +116,10 @@ public class NettyClientConnetion
 	}
 
 	public void doConnect()
-	{		
+	{
 		String host = NettyClientUtil.SERVER_IP;
 		int port = NettyClientUtil.SERVER_PORT;
 
-		
 		//尝试连接次数
 		threadInfo.setTryToConnectCount(threadInfo.getTryToConnectCount() + 1);
 
@@ -139,15 +136,16 @@ public class NettyClientConnetion
 					//成功连接次数
 					threadInfo.setConnectionCount(threadInfo.getConnectionCount() + 1);
 
-//					channel = futureListener.channel();
-					
-//					if(disconnectionCount>1) 
-//						disconnectionCount--;
+					//					channel = futureListener.channel();
+
+					//					if(disconnectionCount>1) 
+					//						disconnectionCount--;
 
 					//保存当前连接
-//					threadInfo.setChannel(channel);
+					//					threadInfo.setChannel(channel);
 
-					System.out.println("[" + Thread.currentThread().getName() + "] 已连接至 Netty Server --> " + host + ":" + port);
+					System.out.println(
+							"[" + Thread.currentThread().getName() + "] 已连接至 Netty Server --> " + host + ":" + port);
 
 					//					System.out.println("已断开连接");
 					//					//断开次数
@@ -171,8 +169,8 @@ public class NettyClientConnetion
 				}
 			}
 		});
-//		}
-		
+		//		}
+
 	}
 
 	//	@Override

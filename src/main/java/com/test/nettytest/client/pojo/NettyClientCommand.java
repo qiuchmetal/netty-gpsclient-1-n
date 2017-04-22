@@ -1,8 +1,10 @@
-package com.test.nettytest.client;
+package com.test.nettytest.client.pojo;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
+
+import com.test.nettytest.client.util.NettyClientUtil;
 
 public class NettyClientCommand
 {

@@ -1,6 +1,8 @@
 package com.test.nettytest.client.pojo;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.netty.channel.Channel;
 
@@ -16,7 +18,11 @@ public class ThreadInfo
 	/**
 	 * 当前连接
 	 */
-	private Channel channel;
+	private List<Channel> channelList = new ArrayList<Channel>();
+	/**
+	 * 当前活跃连接数
+	 */
+	//private int currentActiveChannelCount;
 	/**
 	 * 起始时间 毫秒
 	 */
@@ -87,16 +93,6 @@ public class ThreadInfo
 	public final void setThreadID(String threadID)
 	{
 		this.threadID = threadID;
-	}
-
-	public final Channel getChannel()
-	{
-		return channel;
-	}
-
-	public final void setChannel(Channel channel)
-	{
-		this.channel = channel;
 	}
 
 	public final long getStartTime()
@@ -241,16 +237,40 @@ public class ThreadInfo
 	public final void setHeartBeatPackageCount(int heartBeatPackageCount)
 	{
 		this.heartBeatPackageCount = heartBeatPackageCount;
+	}	
+
+	public List<Channel> getChannelList()
+	{
+		return channelList;
+	}
+
+	public void setChannelList(Channel channel)
+	{
+		this.channelList.add(channel);
+	}
+
+	/**
+	 * 计算当前活跃的连接数
+	 */
+	public final int getCurrentChannelActiveCount()
+	{
+		int cnt = 0;
+		for (Channel c : channelList)
+		{
+			if (c != null && c.isActive())
+				cnt++;
+		}
+		return cnt;
 	}
 
 	@Override
 	public String toString()
 	{
-		return "线程信息： [线程ID=" + threadID + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长=" + runDuration + ", 当前连接状态="
-				+ ((channel != null && channel.isActive()) ? "已连接" : "未连接") + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数="
-				+ connectionCount + ", 连接失败次数=" + failToConnectCount + ", 断开次数=" + disconnectionCount + ", 发送注册包个数=" + loginPackageCount
-				+ ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数="
-				+ abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
+		return "线程信息： [线程ID=" + threadID + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长="
+				+ runDuration + ", 当前活跃连接数=" + getCurrentChannelActiveCount() + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数="
+				+ connectionCount + ", 连接失败次数=" + failToConnectCount + ", 断开次数=" + disconnectionCount + ", 发送注册包个数="
+				+ loginPackageCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount
+				+ ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
 	}
 
 	/**
