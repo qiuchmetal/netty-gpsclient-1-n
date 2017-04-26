@@ -26,7 +26,8 @@ public class ClientMain
 		//定时检查一次看是否有创建文件，正常情况下是每个小时创建一次
 		createFileService.scheduleAtFixedRate(new CreateThreadInfoFileTask(threadInfoList), 0, 1, TimeUnit.MINUTES);
 
-		System.out.println("即将开启的连接数：" + NettyClientUtil.THREAD_POOL_SIZE);
+		System.out.println("即将开启的线程数：[" + NettyClientUtil.THREAD_POOL_SIZE + "]  连接数：["
+				+ NettyClientUtil.THREAD_POOL_SIZE * NettyClientUtil.PER_THREAD_CONNETIONS + "]");
 
 		//		//一条线程开一个连接的方式
 		//		if ("1:1".equalsIgnoreCase(NettyClientUtil.RUN_TYPE))
@@ -44,6 +45,7 @@ public class ClientMain
 		//		executor.shutdown();
 
 		for (int i = 0; i < NettyClientUtil.THREAD_POOL_SIZE; i++)
-			(new NettyClientConnetion(threadInfoList)).start();;
+			(new NettyClientConnetion(threadInfoList)).start();
+		;
 	}
 }

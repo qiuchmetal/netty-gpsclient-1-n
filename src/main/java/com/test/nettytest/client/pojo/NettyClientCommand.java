@@ -84,7 +84,9 @@ public class NettyClientCommand
 	 */
 	private String getBusIdHexStringFromDeque()
 	{
-		return busIdDeque.pollFirst();
+		String busId = busIdDeque.pollFirst();
+		busIdDeque.addLast(busId); //再把车牌放置末尾，以备重复使用。
+		return busId;
 	}
 
 	/**

@@ -11,15 +11,18 @@ import com.test.nettytest.client.util.NettyClientUtil;
 import com.test.nettytest.client.util.ThreadInfoFile;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 public class LoginHandler extends ChannelInboundHandlerAdapter
 {
 	private volatile ScheduledFuture<?> logInTask; //注册任务
-	private volatile ScheduledFuture<?> disconnectTask; //断开任务
+	private volatile ScheduledFuture<?> disconnectWithoutHeartBeatTask; //没有收到心跳的断开任务
+	private volatile ScheduledFuture<?> disconnectInRandomTimeTask; //模拟设备的不稳定情况
 	private volatile ScheduledFuture<?> timingAndFixedDistanceTask; //定时定距任务
 	private volatile ScheduledFuture<?> abnormalTask; //异常任务
 
@@ -67,13 +70,11 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		@Override
 		public void run()
 		{
-			//			System.out.println("[" + df.format(new Date()) + "] 发送注册信息。。。。。。。");
-			//			String sendMsg = "faf50010000c0001ff020000000000000000011e";
 			try
 			{
 				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getLoginBytes()));
-				System.out.println(
-						"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
+				//				System.out.println(
+				//						"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
 				threadInfo.setLoginPackageCount(threadInfo.getLoginPackageCount() + 1);
 			}
 			catch (Exception e)
@@ -85,13 +86,13 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 	}
 
 	/**
-	 * 断开连接
+	 * 没有收到心跳的断开任务
 	 */
-	private class DisconnectTask implements Runnable
+	private class DisconnectWithoutHeartBeatTask implements Runnable
 	{
 		private final ChannelHandlerContext ctx;
 
-		public DisconnectTask(final ChannelHandlerContext ctx)
+		public DisconnectWithoutHeartBeatTask(final ChannelHandlerContext ctx)
 		{
 			this.ctx = ctx;
 		}
@@ -100,7 +101,32 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		public void run()
 		{
 			ctx.disconnect();
-			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ！！已断开连接！！");
+			threadInfo.setDisconnectionOfHeartBeatCount(threadInfo.getDisconnectionOfHeartBeatCount() + 1);
+			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ！！因为没有及时收到心跳而断开连接！！");
+		}
+	}
+
+	/**
+	 * 模拟设备的不稳定情况
+	 */
+	private class DisconnectInRandomTimeTask implements Runnable
+	{
+		private final ChannelHandlerContext ctx;
+
+		public DisconnectInRandomTimeTask(final ChannelHandlerContext ctx)
+		{
+			this.ctx = ctx;
+		}
+
+		@Override
+		public void run()
+		{
+			ctx.disconnect();
+			threadInfo.setDisconnectInRandomTimeCount(threadInfo.getDisconnectInRandomTimeCount() + 1);
+			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ！！模拟设备不稳定而断开连接！！");
+
+			disconnectInRandomTimeTask = ctx.executor().schedule(new DisconnectInRandomTimeTask(ctx),
+					(long) (NettyClientUtil.DISCONNECT_RANGE * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
 		}
 	}
 
@@ -122,9 +148,20 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			try
 			{
 				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getTimingAndFixedDistanceBytes()));
-				System.out.println(
-						"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送定时定距信息！-->>");
+
 				threadInfo.setTimingPackageCount(threadInfo.getTimingPackageCount() + 1);
+
+				if (NettyClientUtil.TIMING_INTERVAL_FIXED != 1) //发包时间不固定
+				{
+					//					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 不固定时间间隔发送定时定距信息！-->>");
+					timingAndFixedDistanceTask = ctx.executor().schedule(new TimingAndFixedDistanceTask(ctx),
+							(long) (NettyClientUtil.TIMING_INTERVAL * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
+				}
+				else
+				{
+					//					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送定时定距信息！-->>");
+				}
+
 			}
 			catch (Exception e)
 			{
@@ -156,12 +193,23 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 				if (count > 3)
 				{
 					ctx.disconnect();
+					threadInfo.setDisconnectionOfAbnormalCount(threadInfo.getDisconnectionOfAbnormalCount() + 1);
+					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ！！因为没有及时收到异常应答而断开连接！！");
 					return;
 				}
 
+				//发送前，随机的 sleep 100ms 以内的一个时间
+				//				try
+				//				{
+				//					TimeUnit.MILLISECONDS.sleep((long) (Math.random() * 100));
+				//				}
+				//				catch (InterruptedException e)
+				//				{
+				//					e.printStackTrace();
+				//				}
+
 				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getAbnormalBytes()));
-				System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date())
-						+ "] 发送异常信息！-->> " + count);
+				//				System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送异常信息！-->> " + count);
 				count++;
 				threadInfo.setAbnormalPackageCount(threadInfo.getAbnormalPackageCount() + 1);
 			}
@@ -185,21 +233,26 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			//线程当前统计时间
 			threadInfo.setEndTime(System.currentTimeMillis());
 			ThreadInfoFile.writeToTxtFile(threadInfo.toString());
-			System.out.println("线程信息已写入文件。");
+			//			System.out.println("线程信息已写入文件。");
 		}
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception
 	{
-		System.out.println("失去连接。");
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 失去连接。");
 		//断开次数
 		threadInfo.setDisconnectionCount(threadInfo.getDisconnectionCount() + 1);
 
-		if (disconnectTask != null)
+		if (disconnectWithoutHeartBeatTask != null)
 		{
-			disconnectTask.cancel(true);
-			disconnectTask = null;
+			disconnectWithoutHeartBeatTask.cancel(true);
+			disconnectWithoutHeartBeatTask = null;
+		}
+		if (disconnectInRandomTimeTask != null)
+		{
+			disconnectInRandomTimeTask.cancel(true);
+			disconnectInRandomTimeTask = null;
 		}
 		if (logInTask != null)
 		{
@@ -228,64 +281,83 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		this.clientCommand = new NettyClientCommand();
 		threadInfo.setChannelList(ctx.channel());
 
-		logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL,
-				TimeUnit.SECONDS);
+		//在过了 100ms 以内的一个随机时间段后再进行注册
+		logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), (long) ((Math.random() * 0.9 + 0.1) * 100),
+				NettyClientUtil.LOGIN_INTERVAL * 1000, TimeUnit.MILLISECONDS);
+
+		//模拟设备因为不稳定而断开连接（一次性任务）
+		if (NettyClientUtil.DISCONNECT_RANGE > 0)
+			disconnectInRandomTimeTask = ctx.executor().schedule(new DisconnectInRandomTimeTask(ctx),
+					(long) (NettyClientUtil.DISCONNECT_RANGE * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
 
 		//开启记录线程的一些信息的调度任务
-		if (threadInfoOutputTask == null)
-			threadInfoOutputTask = ctx.executor().scheduleWithFixedDelay(new ThreadInfoOutputTask(), 30, 30,
-					TimeUnit.SECONDS);
+//		if (threadInfoOutputTask == null)
+//			threadInfoOutputTask = ctx.executor().scheduleWithFixedDelay(new ThreadInfoOutputTask(), 30, 30, TimeUnit.SECONDS);
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception
 	{
-		ByteBuf in = (ByteBuf) msg;
-		byte[] bytes = new byte[in.readableBytes()];
-		in.readBytes(in.readableBytes()).readBytes(bytes);
+		//		ByteBuf in = (ByteBuf) msg;
+		//		ByteBuf in = Unpooled.copiedBuffer((ByteBuf) msg);
+		//		byte[] bytes = new byte[in.readableBytes()];
+		//		in.readBytes(in.readableBytes()).readBytes(bytes);
+		//		ReferenceCountUtil.release(in);
 
-		//		System.out.println(Thread.currentThread().getName() + "接收到的信息：");
-		//		for (byte b : bytes)
-		//			System.out.print(b + ",");
+		byte[] bytes = ByteBufUtil.getBytes((ByteBuf) msg);
+		ReferenceCountUtil.release(msg);
 
-		//		System.out.println(ByteUtil.bin2HexStr(bytes));
+		//				System.out.println(Thread.currentThread().getName() + "接收到的信息：");
+		//				for (byte b : bytes)
+		//					System.out.print(b + ",");
+
+		//		System.out.println("接收到的信息："+ByteBufUtil.hexDump(bytes));
 
 		//接收到了注册应答信息
 		if (bytes.length > 8 && bytes[7] == -96 && logInTask != null)
 		{
 			logInTask.cancel(true);
-			System.out.println("已注册成功。");
+			//			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 已注册成功。");
+
 			//一段时间后没有收到心跳，就断开连接
-			disconnectTask = ctx.executor().scheduleWithFixedDelay(new DisconnectTask(ctx),
-					NettyClientUtil.HEARTBEAT_TIMEOUT, NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
+			disconnectWithoutHeartBeatTask = ctx.executor().schedule(new DisconnectWithoutHeartBeatTask(ctx),
+					NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
 
 			//发送异常信息
+			//			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx), NettyClientUtil.ABNORMAL_INTERVAL,
+			//					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx),
-					NettyClientUtil.ABNORMAL_INTERVAL, NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
+					(long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1)),
+					(long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
 
 			//发送定时定距消息
-			timingAndFixedDistanceTask = ctx.executor().scheduleAtFixedRate(new TimingAndFixedDistanceTask(ctx),
-					NettyClientUtil.TIMING_INTERVAL, NettyClientUtil.TIMING_INTERVAL, TimeUnit.SECONDS);
+			if (NettyClientUtil.TIMING_INTERVAL_FIXED == 1) //按固定的时间间隔进行发包
+				timingAndFixedDistanceTask = ctx.executor().scheduleAtFixedRate(new TimingAndFixedDistanceTask(ctx),
+						NettyClientUtil.TIMING_INTERVAL, NettyClientUtil.TIMING_INTERVAL, TimeUnit.SECONDS);
+			else //发包时间间隔不固定
+				timingAndFixedDistanceTask = ctx.executor().schedule(new TimingAndFixedDistanceTask(ctx),
+						(long) (NettyClientUtil.TIMING_INTERVAL * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
+
 		}
 		//收到了心跳指令
 		else if (bytes.length > 8 && bytes[7] == 1)
 		{
-			System.out.println(Thread.currentThread().getName() + "<<-- 接收到了心跳消息！！！");
+			//			System.out.println(Thread.currentThread().getName() + "<<-- 接收到了心跳消息！！！");
 			threadInfo.setHeartBeatPackageCount(threadInfo.getHeartBeatPackageCount() + 1);
 			//把之前的断开任务取消掉
-			if (disconnectTask != null)
+			if (disconnectWithoutHeartBeatTask != null)
 			{
-				disconnectTask.cancel(true);
-				disconnectTask = null;
+				disconnectWithoutHeartBeatTask.cancel(true);
+				disconnectWithoutHeartBeatTask = null;
 			}
 			//重新开启一个断开任务
-			disconnectTask = ctx.executor().scheduleWithFixedDelay(new DisconnectTask(ctx),
-					NettyClientUtil.HEARTBEAT_TIMEOUT, NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
+			disconnectWithoutHeartBeatTask = ctx.executor().schedule(new DisconnectWithoutHeartBeatTask(ctx),
+					NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
 		}
 		//收到了异常应答
 		else if (bytes.length > 8 && bytes[7] == -63)
 		{
-			System.out.println(Thread.currentThread().getName() + "<<-- 收到了异常应答！！！");
+			//			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] <<-- 收到了异常应答 <<--");
 			threadInfo.setAbnormalResponsePackageCount(threadInfo.getAbnormalResponsePackageCount() + 1);
 			//把之前的异常任务取消掉
 			if (abnormalTask != null)
@@ -293,16 +365,21 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 				abnormalTask.cancel(true);
 				abnormalTask = null;
 			}
-			//重新开启一个断开任务
+			//重新开启一个异常任务
+			//			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx), NettyClientUtil.ABNORMAL_INTERVAL,
+			//					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx),
-					NettyClientUtil.ABNORMAL_INTERVAL, NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
+					(long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1)),
+					(long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
+
 		}
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception
 	{
-		ctx.close();
+		//		ctx.close();
+		ctx.fireExceptionCaught(cause);
 	}
 
 }

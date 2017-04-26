@@ -34,21 +34,30 @@ public class NettyClientUtil
 	 */
 	public static final String BUSID_SEGMENT = getPropertiesValueByKey("netty-client-busidsegment").toUpperCase();
 	/**
-	 * 发送注册信息间隔
+	 * 发送注册信息间隔（秒）
 	 */
 	public static final int LOGIN_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-logininterval"));
 	/**
-	 * 发送定时定距间隔
+	 * 发送定时定距间隔（秒）
 	 */
 	public static final int TIMING_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-timinginterval"));
 	/**
-	 * 心跳超时
+	 * 发送定时定距是否需要固定时间间隔
+	 */
+	public static final int TIMING_INTERVAL_FIXED = Integer.parseInt(getPropertiesValueByKey("netty-client-timinginterval-fixed"));
+	/**
+	 * 心跳超时（秒）
 	 */
 	public static final int HEARTBEAT_TIMEOUT = Integer.parseInt(getPropertiesValueByKey("netty-client-heartbeattimeout"));
 	/**
-	 * 发送异常信息间隔
+	 * 发送异常信息间隔（秒）
 	 */
 	public static final int ABNORMAL_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-abnormalinterval"));
+	/**
+	 * 模拟断开连接的时间范围（分钟）
+	 */
+	public static final int DISCONNECT_RANGE = Integer.parseInt(getPropertiesValueByKey("netty-client-disconnectrange"));
+	
 	/**
 	 * 注册信息
 	 */
@@ -181,13 +190,14 @@ public class NettyClientUtil
 		try
 		{
 			//这个方式是获取在 jar 包内的根目录下的配置文件方式
-			//in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
+//			in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
 
 			//这个方式是获取与 jar 包同路径下的配置文件方式
-			//in = new BufferedInputStream(new FileInputStream(filePath));
+//			in = new BufferedInputStream(new FileInputStream(filePath));
 
 			//这个方法可以把配置文件放在工程的 resources 目录下
 			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
+			
 			pps.load(in);
 			return pps.getProperty(key);
 		}

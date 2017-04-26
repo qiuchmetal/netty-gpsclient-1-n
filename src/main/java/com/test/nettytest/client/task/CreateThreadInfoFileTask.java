@@ -62,6 +62,12 @@ public class CreateThreadInfoFileTask implements Runnable
 				tis.setFailToConnectCount(tis.getFailToConnectCount() + t.getFailToConnectCount());
 				//断开次数
 				tis.setDisconnectionCount(tis.getDisconnectionCount() + t.getDisconnectionCount());
+				//模拟断开次数
+				tis.setDisconnectInRandomTimeCount(tis.getDisconnectInRandomTimeCount() + t.getDisconnectInRandomTimeCount());
+				//因没及时收到心跳而断开次数
+				tis.setDisconnectionOfHeartBeatCount(tis.getDisconnectionOfHeartBeatCount() + t.getDisconnectionOfHeartBeatCount());
+				//因没及时收到异常应答而断开次数
+				tis.setDisconnectionOfAbnormalCount(tis.getDisconnectionOfAbnormalCount() + t.getDisconnectionOfAbnormalCount());
 				//发送的注册包个数
 				tis.setLoginPackageCount(tis.getLoginPackageCount() + t.getLoginPackageCount());
 				//发送的定时定距包个数
@@ -85,18 +91,18 @@ public class CreateThreadInfoFileTask implements Runnable
 		String fileName = (new SimpleDateFormat("yyyy-MM-dd-HH")).format(new Date());
 
 		//创建线程信息明细记录文件
-		File threadInfoFile = new File("ThreadInfo_" + fileName + ".txt");
-		try
-		{
-			if (!threadInfoFile.exists())
-			{
-				threadInfoFile.createNewFile();
-			}
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
+//		File threadInfoFile = new File("ThreadInfo_" + fileName + ".txt");
+//		try
+//		{
+//			if (!threadInfoFile.exists())
+//			{
+//				threadInfoFile.createNewFile();
+//			}
+//		}
+//		catch (Exception e)
+//		{
+//			e.printStackTrace();
+//		}
 
 		if (threadInfoList.size() < 1)
 			return;

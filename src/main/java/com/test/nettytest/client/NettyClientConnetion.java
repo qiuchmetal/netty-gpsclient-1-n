@@ -1,5 +1,7 @@
 package com.test.nettytest.client;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +34,8 @@ public class NettyClientConnetion
 	 * 指令生成类
 	 */
 	//	private NettyClientCommand clientCommand;
+	
+	private static SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 
 	//	private Channel channel;
 	private Bootstrap bootstrap;
@@ -123,8 +127,18 @@ public class NettyClientConnetion
 		//尝试连接次数
 		threadInfo.setTryToConnectCount(threadInfo.getTryToConnectCount() + 1);
 
-		System.out.println("[" + Thread.currentThread().getName() + "] 准备连接 Netty Server --> " + host + ":" + port);
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 准备连接 Netty Server --> " + host + ":" + port);
 
+		//连接前，随机的 sleep 100ms 以内的一个时间
+//		try
+//		{
+//			TimeUnit.MILLISECONDS.sleep((long) (Math.random()*100));
+//		}
+//		catch (InterruptedException e)
+//		{
+//			e.printStackTrace();
+//		}
+		
 		ChannelFuture future = bootstrap.connect(host, port);
 
 		future.addListener(new ChannelFutureListener()
@@ -138,22 +152,15 @@ public class NettyClientConnetion
 
 					//					channel = futureListener.channel();
 
-					//					if(disconnectionCount>1) 
-					//						disconnectionCount--;
-
 					//保存当前连接
 					//					threadInfo.setChannel(channel);
 
-					System.out.println(
-							"[" + Thread.currentThread().getName() + "] 已连接至 Netty Server --> " + host + ":" + port);
-
-					//					System.out.println("已断开连接");
-					//					//断开次数
-					//					threadInfo.setDisconnectionCount(threadInfo.getDisconnectionCount() + 1);
+//					System.out.println(
+//							"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 已连接至 Netty Server --> " + host + ":" + port);
 				}
 				else
 				{
-					System.out.println("连接失败，10秒后尝试重连。");
+					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 连接失败，10秒后尝试重连。");
 
 					//连接失败次数
 					threadInfo.setFailToConnectCount(threadInfo.getFailToConnectCount() + 1);

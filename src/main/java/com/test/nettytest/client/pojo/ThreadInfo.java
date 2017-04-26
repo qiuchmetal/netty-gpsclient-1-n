@@ -60,6 +60,18 @@ public class ThreadInfo
 	 */
 	private int disconnectionCount = 0;
 	/**
+	 * 模拟断开次数
+	 */
+	private int disconnectInRandomTimeCount = 0;
+	/**
+	 * 因没及时收到心跳而断开次数
+	 */
+	private int disconnectionOfHeartBeatCount = 0;
+	/**
+	 * 因没及时收到异常应答而断开次数
+	 */
+	private int disconnectionOfAbnormalCount = 0;
+	/**
 	 * 发送的注册包个数
 	 */
 	private int loginPackageCount = 0;
@@ -189,6 +201,36 @@ public class ThreadInfo
 		this.disconnectionCount = disconnectionCount;
 	}
 
+	public final int getDisconnectInRandomTimeCount()
+	{
+		return disconnectInRandomTimeCount;
+	}
+
+	public final void setDisconnectInRandomTimeCount(int disconnectInRandomTimeCount)
+	{
+		this.disconnectInRandomTimeCount = disconnectInRandomTimeCount;
+	}
+
+	public final int getDisconnectionOfHeartBeatCount()
+	{
+		return disconnectionOfHeartBeatCount;
+	}
+
+	public final void setDisconnectionOfHeartBeatCount(int disconnectionOfHeartBeatCount)
+	{
+		this.disconnectionOfHeartBeatCount = disconnectionOfHeartBeatCount;
+	}
+
+	public final int getDisconnectionOfAbnormalCount()
+	{
+		return disconnectionOfAbnormalCount;
+	}
+
+	public final void setDisconnectionOfAbnormalCount(int disconnectionOfAbnormalCount)
+	{
+		this.disconnectionOfAbnormalCount = disconnectionOfAbnormalCount;
+	}
+
 	public final int getLoginPackageCount()
 	{
 		return loginPackageCount;
@@ -237,7 +279,7 @@ public class ThreadInfo
 	public final void setHeartBeatPackageCount(int heartBeatPackageCount)
 	{
 		this.heartBeatPackageCount = heartBeatPackageCount;
-	}	
+	}
 
 	public List<Channel> getChannelList()
 	{
@@ -266,10 +308,11 @@ public class ThreadInfo
 	@Override
 	public String toString()
 	{
-		return "线程信息： [线程ID=" + threadID + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长="
-				+ runDuration + ", 当前活跃连接数=" + getCurrentChannelActiveCount() + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数="
-				+ connectionCount + ", 连接失败次数=" + failToConnectCount + ", 断开次数=" + disconnectionCount + ", 发送注册包个数="
-				+ loginPackageCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount
+		return "线程信息： [线程ID=" + threadID + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长=" + runDuration
+				+ ", 当前活跃连接数=" + getCurrentChannelActiveCount() + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数=" + connectionCount
+				+ ", 连接失败次数=" + failToConnectCount + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount
+				+ ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount
+				+ ", 发送注册包个数=" + loginPackageCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount
 				+ ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
 	}
 
