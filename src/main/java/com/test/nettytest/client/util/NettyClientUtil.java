@@ -30,6 +30,10 @@ public class NettyClientUtil
 	 */
 	public static final int PER_THREAD_CONNETIONS = Integer.parseInt(getPropertiesValueByKey("netty-client-perthreadconnection"));
 	/**
+	 * Netty Client 的启动参数 直接开启的连接数
+	 */
+	public static final int CONNETION_COUNT = Integer.parseInt(getPropertiesValueByKey("netty-client-connectioncount"));
+	/**
 	 * 车号生成段
 	 */
 	public static final String BUSID_SEGMENT = getPropertiesValueByKey("netty-client-busidsegment").toUpperCase();
@@ -231,10 +235,10 @@ public class NettyClientUtil
 //			in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
 
 			//这个方式是获取与 jar 包（在 jar 包外）同路径下的配置文件方式
-			in = new BufferedInputStream(new FileInputStream(filePath));
+//			in = new BufferedInputStream(new FileInputStream(filePath));
 
 			//这个方法可以把配置文件放在工程的 resources 目录下
-//			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
+			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
 			
 			pps.load(in);
 			return pps.getProperty(key);

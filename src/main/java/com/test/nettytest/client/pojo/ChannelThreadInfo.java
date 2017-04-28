@@ -1,8 +1,6 @@
 package com.test.nettytest.client.pojo;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.test.nettytest.client.util.NettyClientUtil;
 
@@ -11,7 +9,7 @@ import io.netty.channel.Channel;
 /**
  * 每条线程收集到信息
  */
-public class ThreadInfo
+public class ChannelThreadInfo
 {
 	/**
 	 * 线程ID
@@ -20,7 +18,9 @@ public class ThreadInfo
 	/**
 	 * 当前连接
 	 */
-	private List<Channel> channelList = new ArrayList<Channel>();
+	private Channel channel;
+	//	private ConcurrentSkipListSet<Channel> channelSet = new ConcurrentSkipListSet<Channel>();
+	//	private List<Channel> channelList = new ArrayList<Channel>();
 	/**
 	 * 当前活跃连接数
 	 */
@@ -45,18 +45,9 @@ public class ThreadInfo
 	 * 运行时长
 	 */
 	private String runDuration;
-	/**
-	 * 尝试连接次数
+	/*
+	 ***************************************************
 	 */
-	private int tryToConnectCount = 0;
-	/**
-	 * 成功连接次数
-	 */
-	private int connectionCount = 0;
-	/**
-	 * 连接失败次数
-	 */
-	private int failToConnectCount = 0;
 	/**
 	 * 断开次数
 	 */
@@ -73,10 +64,17 @@ public class ThreadInfo
 	 * 因没及时收到异常应答而断开次数
 	 */
 	private int disconnectionOfAbnormalCount = 0;
+	/*
+	 ***************************************************
+	 */
 	/**
 	 * 发送的注册包个数
 	 */
-	private int loginPackageCount = 0;
+	private int loginPackageSendCount = 0;
+	/**
+	 * 接收的注册应答包个数
+	 */
+	private int loginPackageReceivedCount = 0;
 	/**
 	 * 发送的定时定距包个数
 	 */
@@ -109,6 +107,16 @@ public class ThreadInfo
 		this.threadID = threadID;
 	}
 
+	public final Channel getChannel()
+	{
+		return channel;
+	}
+
+	public final void setChannel(Channel channel)
+	{
+		this.channel = channel;
+	}
+
 	public final long getStartTime()
 	{
 		return startTime;
@@ -118,6 +126,7 @@ public class ThreadInfo
 	{
 		this.startTime = startTime;
 
+		//起始时间 yyyy-MM-dd HH:mm:ss
 		this.startTimeString = df.format(startTime);
 	}
 
@@ -126,18 +135,11 @@ public class ThreadInfo
 		return startTimeString;
 	}
 
-	//	public final void setStartTimeString(String startTimeString)
-	//	{
-	//		this.startTimeString = startTimeString;
-	//	}
-	//	public final Date getEndTime()
-	//	{
-	//		return endTime;
-	//	}
 	public final void setEndTime(long endTime)
 	{
 		this.endTime = endTime;
 
+		//终止时间 yyyy-MM-dd HH:mm:ss
 		this.endTimeString = df.format(endTime);
 
 		//计算运行时长
@@ -149,48 +151,9 @@ public class ThreadInfo
 		return endTimeString;
 	}
 
-	//	public final void setEndTimeString(String endTimeString)
-	//	{
-	//		this.endTimeString = endTimeString;
-	//	}
 	public final String getRunDuration()
 	{
 		return runDuration;
-	}
-
-	//	public final void setRunDuration(String runDuration)
-	//	{
-	//		this.runDuration = runDuration;
-	//	}
-
-	public final int getTryToConnectCount()
-	{
-		return tryToConnectCount;
-	}
-
-	public final void setTryToConnectCount(int tryToConnectCount)
-	{
-		this.tryToConnectCount = tryToConnectCount;
-	}
-
-	public final int getConnectionCount()
-	{
-		return connectionCount;
-	}
-
-	public final void setConnectionCount(int connectionCount)
-	{
-		this.connectionCount = connectionCount;
-	}
-
-	public final int getFailToConnectCount()
-	{
-		return failToConnectCount;
-	}
-
-	public final void setFailToConnectCount(int failToConnectCount)
-	{
-		this.failToConnectCount = failToConnectCount;
 	}
 
 	public final int getDisconnectionCount()
@@ -233,14 +196,24 @@ public class ThreadInfo
 		this.disconnectionOfAbnormalCount = disconnectionOfAbnormalCount;
 	}
 
-	public final int getLoginPackageCount()
+	public final int getLoginPackageSendCount()
 	{
-		return loginPackageCount;
+		return loginPackageSendCount;
 	}
 
-	public final void setLoginPackageCount(int loginPackageCount)
+	public final void setLoginPackageSendCount(int loginPackageSendCount)
 	{
-		this.loginPackageCount = loginPackageCount;
+		this.loginPackageSendCount = loginPackageSendCount;
+	}
+
+	public final int getLoginPackageReceivedCount()
+	{
+		return loginPackageReceivedCount;
+	}
+
+	public final void setLoginPackageReceivedCount(int loginPackageReceivedCount)
+	{
+		this.loginPackageReceivedCount = loginPackageReceivedCount;
 	}
 
 	public final int getTimingPackageCount()
@@ -283,38 +256,51 @@ public class ThreadInfo
 		this.heartBeatPackageCount = heartBeatPackageCount;
 	}
 
-	public List<Channel> getChannelList()
-	{
-		return channelList;
-	}
-
-	public void setChannelList(Channel channel)
-	{
-		this.channelList.add(channel);
-	}
-
-	/**
-	 * 计算当前活跃的连接数
-	 */
-	public final int getCurrentChannelActiveCount()
-	{
-		int cnt = 0;
-		for (Channel c : channelList)
-		{
-			if (c != null && c.isActive())
-				cnt++;
-		}
-		return cnt;
-	}
+	//	public List<Channel> getChannelList()
+	//	{
+	//		return channelList;
+	//	}
+	//
+	//	public void setChannelList(Channel channel)
+	//	{
+	//		this.channelList.add(channel);
+	//	}
+	//
+	//	/**
+	//	 * 计算当前活跃的连接数
+	//	 */
+	//	public final int getCurrentChannelActiveCount()
+	//	{
+	//		int cnt = 0;
+	//		//		for (Channel c : channelList)
+	//		//		{
+	//		//			if (c != null && c.isActive())
+	//		//				cnt++;
+	//		//		}
+	//		for (Channel c : channelSet)
+	//		{
+	//			if (c != null && c.isActive())
+	//				cnt++;
+	//		}
+	//		return cnt;
+	//	}
 
 	@Override
 	public String toString()
 	{
-		return "线程信息： [线程ID=" + threadID + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长=" + runDuration
-				+ ", 当前活跃连接数=" + getCurrentChannelActiveCount() + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数=" + connectionCount
-				+ ", 连接失败次数=" + failToConnectCount + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount
-				+ ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount
-				+ ", 发送注册包个数=" + loginPackageCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount
-				+ ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
+		if (channel.isActive())
+			return "子线程信息： [线程ID=" + threadID + ", 连接状态=在线" + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长="
+					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
+					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
+					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
+					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+					+ heartBeatPackageCount + "]";
+		else
+			return "子线程信息： [线程ID=" + threadID + ", 连接状态=失效" + ", 开始时间=" + startTimeString + ", 失效时间=" + endTimeString + ", 运行时长="
+					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
+					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
+					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
+					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+					+ heartBeatPackageCount + "]";
 	}
 }

@@ -9,30 +9,25 @@ import com.test.nettytest.client.util.NettyClientUtil;
  */
 public class ThreadInfoStatistics
 {
-	/**
-	 * 线程创建总数
+	/*
+	 ************* 连接情况 ********************************
 	 */
-	private int threadListCount;
 	/**
-	 * 当前连接总数
+	 * 连接开始时间 毫秒
 	 */
-	private int currentChannelActiveCount;
+	private long connectionStartTime;
 	/**
-	 * 起始时间 毫秒
+	 * 连接开始时间 yyyy-MM-dd HH:mm:ss
 	 */
-	private long startTime;
+	private String connectionStartTimeString;
 	/**
-	 * 起始时间 yyyy-MM-dd HH:mm:ss
+	 * 连接结束时间 毫秒
 	 */
-	private String startTimeString;
+	private long connectionEndTime;
 	/**
-	 * 统计终止时间 毫秒
+	 * 连接结束时间 yyyy-MM-dd HH:mm:ss
 	 */
-	private long endTime;
-	/**
-	 * 统计终止时间 yyyy-MM-dd HH:mm:ss
-	 */
-	private String endTimeString;
+	private String connectionEndTimeString;
 	/**
 	 * 运行时长
 	 */
@@ -49,6 +44,17 @@ public class ThreadInfoStatistics
 	 * 连接失败次数
 	 */
 	private int failToConnectCount = 0;
+	/*
+	 ************* 管道情况 ********************************
+	 */
+	/**
+	 * 管道线程创建总数
+	 */
+	private int channelThreadsCount;
+	/**
+	 * 当前连接总数
+	 */
+	private int currentChannelActiveCount;
 	/**
 	 * 断开次数
 	 */
@@ -68,7 +74,11 @@ public class ThreadInfoStatistics
 	/**
 	 * 发送的注册包个数
 	 */
-	private int loginPackageCount = 0;
+	private int loginPackageSendCount = 0;
+	/**
+	 * 接收的注册应答包个数
+	 */
+	private int loginPackageReceivedCount = 0;
 	/**
 	 * 发送的定时定距包个数
 	 */
@@ -91,79 +101,50 @@ public class ThreadInfoStatistics
 	 */
 	private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-	public final int getThreadListCount()
+	/*
+	 ************* 连接情况 ********************************
+	 */
+	public final long getConnectionStartTime()
 	{
-		return threadListCount;
+		return connectionStartTime;
 	}
 
-	public final void setThreadListCount(int threadListCount)
+	public final void setConnectionStartTime(long connectionStartTime)
 	{
-		this.threadListCount = threadListCount;
+		this.connectionStartTime = connectionStartTime;
+
+		this.connectionStartTimeString = df.format(connectionStartTime);
 	}
 
-	public final int getCurrentChannelActiveCount()
+	public final String getConnectionStartTimeString()
 	{
-		return currentChannelActiveCount;
+		return connectionStartTimeString;
 	}
 
-	public final void setCurrentChannelActiveCount(int currentChannelActiveCount)
+	public final void setConnectionEndTime(long connectionEndTime)
 	{
-		this.currentChannelActiveCount = currentChannelActiveCount;
-	}
+		this.connectionEndTime = connectionEndTime;
 
-	public final long getStartTime()
-	{
-		return startTime;
-	}
-
-	public final void setStartTime(long startTime)
-	{
-		this.startTime = startTime;
-
-		this.startTimeString = df.format(startTime);
-	}
-
-	public final String getStartTimeString()
-	{
-		return startTimeString;
-	}
-
-	//	public final void setStartTimeString(String startTimeString)
-	//	{
-	//		this.startTimeString = startTimeString;
-	//	}
-	//	public final Date getEndTime()
-	//	{
-	//		return endTime;
-	//	}
-	public final void setEndTime(long endTime)
-	{
-		this.endTime = endTime;
-
-		this.endTimeString = df.format(endTime);
+		this.connectionEndTimeString = df.format(connectionEndTime);
 
 		//计算运行时长
-		this.runDuration = NettyClientUtil.getFormatTime(this.endTime - this.startTime);
-	}
+		this.runDuration = NettyClientUtil.getFormatTime(connectionEndTime - this.connectionStartTime);
+	}	
 
-	public final String getEndTimeString()
+	public final String getConnectionEndTimeString()
 	{
-		return endTimeString;
+		return connectionEndTimeString;
 	}
 
-	//	public final void setEndTimeString(String endTimeString)
-	//	{
-	//		this.endTimeString = endTimeString;
-	//	}
+//	public final void setRunDuration(String runDuration)
+//	{
+//		this.runDuration = runDuration;
+//	}
+
 	public final String getRunDuration()
 	{
 		return runDuration;
 	}
-
-	//	public final void setRunDuration(String runDuration)
-	//	{
-	//		this.runDuration = runDuration;
-	//	}
 
 	public final int getTryToConnectCount()
 	{
@@ -193,6 +174,30 @@ public class ThreadInfoStatistics
 	public final void setFailToConnectCount(int failToConnectCount)
 	{
 		this.failToConnectCount = failToConnectCount;
+	}
+
+	/*
+	 ************* 管道断开情况 ********************************
+	 */
+
+	public final int getChannelThreadsCount()
+	{
+		return channelThreadsCount;
+	}
+
+	public final void setChannelThreadsCount(int channelThreadsCount)
+	{
+		this.channelThreadsCount = channelThreadsCount;
+	}
+
+	public final int getCurrentChannelActiveCount()
+	{
+		return currentChannelActiveCount;
+	}
+
+	public final void setCurrentChannelActiveCount(int currentChannelActiveCount)
+	{
+		this.currentChannelActiveCount = currentChannelActiveCount;
 	}
 
 	public final int getDisconnectionCount()
@@ -235,14 +240,28 @@ public class ThreadInfoStatistics
 		this.disconnectionOfAbnormalCount = disconnectionOfAbnormalCount;
 	}
 
-	public final int getLoginPackageCount()
+	/*
+	 ************* 发包情况 ********************************
+	 */
+
+	public final int getLoginPackageSendCount()
 	{
-		return loginPackageCount;
+		return loginPackageSendCount;
 	}
 
-	public final void setLoginPackageCount(int loginPackageCount)
+	public final void setLoginPackageSendCount(int loginPackageSendCount)
 	{
-		this.loginPackageCount = loginPackageCount;
+		this.loginPackageSendCount = loginPackageSendCount;
+	}
+
+	public final int getLoginPackageReceivedCount()
+	{
+		return loginPackageReceivedCount;
+	}
+
+	public final void setLoginPackageReceivedCount(int loginPackageReceivedCount)
+	{
+		this.loginPackageReceivedCount = loginPackageReceivedCount;
 	}
 
 	public final int getTimingPackageCount()
@@ -288,11 +307,18 @@ public class ThreadInfoStatistics
 	@Override
 	public String toString()
 	{
-		return "线程统计信息： [线程创建总数=" + threadListCount + ", 当前连接总数=" + currentChannelActiveCount + ", 统计开始时间=" + startTimeString + ", 统计截止时间="
-				+ endTimeString + ", 运行时长=" + runDuration + ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数=" + connectionCount + ", 连接失败次数="
-				+ failToConnectCount + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
-				+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数=" + loginPackageCount
-				+ ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数="
-				+ abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
+		StringBuilder sb = new StringBuilder();
+		sb.append("[创建连接的线程信息： 开始时间=" + connectionStartTimeString + ", 记录截止时间=" + connectionEndTimeString + ", 运行时长=" + runDuration
+				+ ", 尝试连接次数=" + tryToConnectCount + ", 成功连接次数=" + connectionCount + ", 连接失败次数=" + failToConnectCount + "]\n\r\n\r");
+
+		sb.append("[管道线程连接情况统计： 管道线程创建总数=" + channelThreadsCount + ", 当前连接总数=" + currentChannelActiveCount + ", 断开次数=" + disconnectionCount
+				+ ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数="
+				+ disconnectionOfAbnormalCount + "]\n\r\n\r");
+
+		sb.append("[管道线程数据包情况统计：发送注册包个数=" + loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数="
+				+ timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+				+ heartBeatPackageCount + "]");
+
+		return sb.toString();
 	}
 }

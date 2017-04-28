@@ -1,37 +1,42 @@
 package com.test.nettytest.client;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.test.nettytest.client.pojo.ThreadInfo;
+import com.test.nettytest.client.pojo.ChannelThreadInfo;
+import com.test.nettytest.client.pojo.ConnectionThreadInfo;
 import com.test.nettytest.client.task.CreateThreadInfoFileTask;
-import com.test.nettytest.client.util.NettyClientUtil;
 
 public class ClientMain
 {
 
 	public static void main(String[] args)
 	{
-		//线程信息统计
-		List<ThreadInfo> threadInfoList = new ArrayList<ThreadInfo>();
-
-		//		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
-		//		ExecutorService executorService = Executors.newFixedThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
+		//连接线程，只有一个对象
+		ConnectionThreadInfo connectionThreadInfo = new ConnectionThreadInfo();
+		//管道线程信息统计
+		ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet = new ConcurrentSkipListSet<ChannelThreadInfo>();
 
 		//专门用来创建记录 ThreadInfo 信息的文件的线程
 		ScheduledExecutorService createFileService = Executors.newScheduledThreadPool(1);
 		//定时检查一次看是否有创建文件，正常情况下是每个小时创建一次
-		createFileService.scheduleAtFixedRate(new CreateThreadInfoFileTask(threadInfoList), 0, 1, TimeUnit.MINUTES);
+		createFileService.scheduleAtFixedRate(new CreateThreadInfoFileTask(connectionThreadInfo, channelThreadInfoSet), 0, 1, TimeUnit.MINUTES);
 		
-		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
-		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的线程数：[" + NettyClientUtil.THREAD_POOL_SIZE + "]  连接数：["
-				+ NettyClientUtil.THREAD_POOL_SIZE * NettyClientUtil.PER_THREAD_CONNETIONS + "]");
+//		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的线程数：[" + NettyClientUtil.THREAD_POOL_SIZE + "]  连接数：["
+//				+ NettyClientUtil.THREAD_POOL_SIZE * NettyClientUtil.PER_THREAD_CONNETIONS + "]");
 
+//		for (int i = 0; i < NettyClientUtil.THREAD_POOL_SIZE; i++)
+//		(new NettyClientConnetion(threadInfoList)).start();
+	
+		new NettyClientConnetion(connectionThreadInfo, channelThreadInfoSet).start();
+
+		//		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
+		//		ExecutorService executorService = Executors.newFixedThreadPool(NettyClientUtil.THREAD_POOL_SIZE);		
 		//		//一条线程开一个连接的方式
 		//		if ("1:1".equalsIgnoreCase(NettyClientUtil.RUN_TYPE))
 		//		{
@@ -46,9 +51,5 @@ public class ClientMain
 		//		}
 		//
 		//		executor.shutdown();
-
-		for (int i = 0; i < NettyClientUtil.THREAD_POOL_SIZE; i++)
-			(new NettyClientConnetion(threadInfoList)).start();
-		;
 	}
 }

@@ -6,8 +6,10 @@ import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
 
-import com.test.nettytest.client.pojo.ThreadInfo;
+import com.test.nettytest.client.pojo.ChannelThreadInfo;
+import com.test.nettytest.client.pojo.ConnectionThreadInfo;
 import com.test.nettytest.client.pojo.ThreadInfoStatistics;
 
 /**
@@ -16,20 +18,18 @@ import com.test.nettytest.client.pojo.ThreadInfoStatistics;
 public class CreateThreadInfoFileTask implements Runnable
 {
 	/**
-	 * 线程统计信息列表
+	 * 连接线程
 	 */
-	private List<ThreadInfo> threadInfoList;
-
+	private ConnectionThreadInfo connectionThreadInfo;
 	/**
-	 * 线程池信息
+	 * 管道线程统计信息
 	 */
-	//	private ThreadPoolExecutor executor;
+	private ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet;
 
-	//	public CreateThreadInfoFileTask(List<ThreadInfo> threadInfoList, ThreadPoolExecutor executor)
-	public CreateThreadInfoFileTask(List<ThreadInfo> threadInfoList)
+	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo, ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet)
 	{
-		this.threadInfoList = threadInfoList;
-		//		this.executor = executor;
+		this.connectionThreadInfo = connectionThreadInfo;
+		this.channelThreadInfoSet = channelThreadInfoSet;
 	}
 
 	/**
@@ -37,15 +37,31 @@ public class CreateThreadInfoFileTask implements Runnable
 	 */
 	private String doThreadStatistics()
 	{
+		ThreadInfoStatistics tis = new ThreadInfoStatistics();
+		
+		//连接线程
+		tis.setConnectionStartTime(connectionThreadInfo.getStartTime());//连接开始时间 毫秒
+		tis.setConnectionEndTime(System.currentTimeMillis());//连接结束时间 毫秒
+		tis.setTryToConnectCount(connectionThreadInfo.getTryToConnectCount());//尝试连接次数
+		tis.setConnectionCount(connectionThreadInfo.getConnectionCount());//成功连接次数
+		tis.setFailToConnectCount(connectionThreadInfo.getFailToConnectCount());//连接失败次数
+		
+		//管道线程
+		for(ChannelThreadInfo cInfo:channelThreadInfoSet)
+		{
+			//管道线程创建总数
+			tis.setChannelThreadsCount(tis.getChannelThreadsCount() + t.getCurrentChannelActiveCount());
+		}
+		
 		int size = threadInfoList.size();
 		if (size > 0)
 		{
-			ThreadInfoStatistics tis = new ThreadInfoStatistics();
+			
 			//线程创建总数
 			tis.setThreadListCount(size);
 			//当前线程总数
 			//			tis.setCurrentThreadCount(executor.getActiveCount());
-			for (ThreadInfo t : threadInfoList)
+			for (ChannelThreadInfo t : threadInfoList)
 			{
 				//起始时间 毫秒
 				tis.setStartTime(
@@ -69,7 +85,9 @@ public class CreateThreadInfoFileTask implements Runnable
 				//因没及时收到异常应答而断开次数
 				tis.setDisconnectionOfAbnormalCount(tis.getDisconnectionOfAbnormalCount() + t.getDisconnectionOfAbnormalCount());
 				//发送的注册包个数
-				tis.setLoginPackageCount(tis.getLoginPackageCount() + t.getLoginPackageCount());
+				tis.setLoginPackageSendCount(tis.getLoginPackageSendCount() + t.getLoginPackageSendCount());
+				//收到的注册应答包个数
+				tis.setLoginPackageReceivedCount(tis.getLoginPackageReceivedCount() + t.getLoginPackageReceivedCount());
 				//发送的定时定距包个数
 				tis.setTimingPackageCount(tis.getTimingPackageCount() + t.getTimingPackageCount());
 				//发送的异常包个数
@@ -91,18 +109,18 @@ public class CreateThreadInfoFileTask implements Runnable
 		String fileName = (new SimpleDateFormat("yyyy-MM-dd-HH")).format(new Date());
 
 		//创建线程信息明细记录文件
-//		File threadInfoFile = new File("ThreadInfo_" + fileName + ".txt");
-//		try
-//		{
-//			if (!threadInfoFile.exists())
-//			{
-//				threadInfoFile.createNewFile();
-//			}
-//		}
-//		catch (Exception e)
-//		{
-//			e.printStackTrace();
-//		}
+		File threadInfoFile = new File("ThreadInfo_" + fileName + ".txt");
+		try
+		{
+			if (!threadInfoFile.exists())
+			{
+				threadInfoFile.createNewFile();
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
 
 		if (threadInfoList.size() < 1)
 			return;
