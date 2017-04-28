@@ -34,6 +34,10 @@ public class NettyClientUtil
 	 */
 	public static final String BUSID_SEGMENT = getPropertiesValueByKey("netty-client-busidsegment").toUpperCase();
 	/**
+	 * 连接后多久完成注册（分钟）
+	 */
+	public static final int LOGIN_TIMEOUT = Integer.parseInt(getPropertiesValueByKey("netty-client-logintimeout"));
+	/**
 	 * 发送注册信息间隔（秒）
 	 */
 	public static final int LOGIN_INTERVAL = Integer.parseInt(getPropertiesValueByKey("netty-client-logininterval"));
@@ -156,6 +160,40 @@ public class NettyClientUtil
 		}
 		return Bytes.toArray(list);
 	}
+	
+	/**
+	 * 运行时长格式 xx小时xx分xx秒
+	 */
+	public static String getFormatTime(long duration)
+	{
+		StringBuilder sb = new StringBuilder();
+		duration = duration / 1000;
+
+		//取秒
+		int s = (int) (duration % 60);
+
+		sb.append(s + "秒");
+
+		//取分钟
+		int m = (int) (duration - s > 0 ? (duration - s) / 60 : 0);
+
+		if (m > 0)
+		{
+			if (m >= 60)
+			{
+				//取小时
+				int h = (m - m % 60) / 60;
+				m = m % 60;
+				sb.insert(0, h + "小时" + m + "分钟");
+			}
+			else
+			{
+				sb.insert(0, m + "分钟");
+			}
+		}
+
+		return sb.toString();
+	}
 
 	/**
 	 * 车号字符库
@@ -192,11 +230,11 @@ public class NettyClientUtil
 			//这个方式是获取在 jar 包内的根目录下的配置文件方式
 //			in = NettyClientUtil.class.getClassLoader().getResourceAsStream("netty-client.properties");
 
-			//这个方式是获取与 jar 包同路径下的配置文件方式
-//			in = new BufferedInputStream(new FileInputStream(filePath));
+			//这个方式是获取与 jar 包（在 jar 包外）同路径下的配置文件方式
+			in = new BufferedInputStream(new FileInputStream(filePath));
 
 			//这个方法可以把配置文件放在工程的 resources 目录下
-			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
+//			in = new BufferedInputStream(new FileInputStream(NettyClientUtil.class.getResource("/").getPath() + "netty-client.properties"));
 			
 			pps.load(in);
 			return pps.getProperty(key);

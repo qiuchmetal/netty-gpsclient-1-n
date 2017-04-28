@@ -81,8 +81,14 @@ public class NettyClientConnetion
 		//		//记录线程开始时间
 		//		threadInfo.setStartTime(System.currentTimeMillis());
 
+		
 		for (int i = 0; i < CONNECTION_COUNT; i++)
 			doConnect();
+		
+		//使用调度线程进行连接
+		
+		
+		
 
 		//		ChannelFuture f = null;
 		//

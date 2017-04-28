@@ -1,6 +1,8 @@
 package com.test.nettytest.client;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,8 +27,9 @@ public class ClientMain
 		ScheduledExecutorService createFileService = Executors.newScheduledThreadPool(1);
 		//定时检查一次看是否有创建文件，正常情况下是每个小时创建一次
 		createFileService.scheduleAtFixedRate(new CreateThreadInfoFileTask(threadInfoList), 0, 1, TimeUnit.MINUTES);
-
-		System.out.println("即将开启的线程数：[" + NettyClientUtil.THREAD_POOL_SIZE + "]  连接数：["
+		
+		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的线程数：[" + NettyClientUtil.THREAD_POOL_SIZE + "]  连接数：["
 				+ NettyClientUtil.THREAD_POOL_SIZE * NettyClientUtil.PER_THREAD_CONNETIONS + "]");
 
 		//		//一条线程开一个连接的方式

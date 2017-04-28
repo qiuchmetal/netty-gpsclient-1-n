@@ -13,11 +13,22 @@ public class NettyClientCommand
 	 * 随机生成的车号
 	 */
 	private String busId;
+	/**
+	 * 车号的 16 进制字符串
+	 */
+	private String busIdHexString;
 
 	public NettyClientCommand()
 	{
 		//		this.busId = getBusIdHexStringByUUID();
-		this.busId = getBusIdHexStringFromDeque();
+		//		this.busId = getBusIdHexStringFromDeque();
+		this.busId = getBusIdFromDeque();
+		this.busIdHexString = NettyClientUtil.byteArrayToHexString(this.busId.getBytes());
+	}
+
+	public final String getBusId()
+	{
+		return busId;
 	}
 
 	/**
@@ -69,7 +80,8 @@ public class NettyClientCommand
 								.append(busIdLetters.charAt(i4)) //车牌左边第四位
 								.append(busIdLetters.charAt(i5)); //车牌左边第五位
 						//生成车牌，并加入队列
-						deque.add(NettyClientUtil.byteArrayToHexString(sb.toString().getBytes()));
+						//						deque.add(NettyClientUtil.byteArrayToHexString(sb.toString().getBytes()));
+						deque.add(sb.toString());
 						sb.delete(0, sb.length()); //清空 StringBuilder
 					}
 				}
@@ -82,7 +94,7 @@ public class NettyClientCommand
 	/**
 	 * 从列表里获取车号
 	 */
-	private String getBusIdHexStringFromDeque()
+	private String getBusIdFromDeque()
 	{
 		String busId = busIdDeque.pollFirst();
 		busIdDeque.addLast(busId); //再把车牌放置末尾，以备重复使用。
@@ -90,18 +102,26 @@ public class NettyClientCommand
 	}
 
 	/**
+	 * 把车号转化为 16 进制字符串
+	 */
+//	private String getBusIdHexString()
+//	{
+//		return NettyClientUtil.byteArrayToHexString(busId.getBytes());
+//	}
+
+	/**
 	 * 实时获取注册信息
 	 */
 	public byte[] getLoginBytes()
-	{
+	{		
 		StringBuilder sb = new StringBuilder();
 		sb.append("001000a7002002ff00000000000000005180000101");
-		sb.append(this.busId);
+		sb.append(this.busIdHexString);		
 		sb.append("303030305a000000010000000000000001070000000000000000000000000000000000");
 		//sb.append(new SimpleDateFormat("yyMMddHHmmss").format(new Date()));
 		sb.append(new SimpleDateFormat("ddHHmmssSSSS").format(new Date()));
 		sb.append("00000000000000008806ffff000003075431363132323739310000000000000000000000000000000000000000000000");
-		sb.append(this.busId);
+		sb.append(this.busIdHexString);
 		sb.append("000000000000000000000000000000000000000000000000000300000700000000000000000000000000000000");
 
 		//计算校验位
@@ -124,7 +144,7 @@ public class NettyClientCommand
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("00100052004102ff00000000000000005180000101");
-		sb.append(this.busId);
+		sb.append(this.busIdHexString);
 		sb.append("3030383500000000000000000000000000500000000000000080000000000000000000");
 		//sb.append(new SimpleDateFormat("yyMMddHHmmss").format(new Date()));
 		sb.append(new SimpleDateFormat("ddHHmmssSSSS").format(new Date()));
@@ -150,7 +170,7 @@ public class NettyClientCommand
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("00100059004502FF00000000000000005180000101");
-		sb.append(this.busId);
+		sb.append(this.busIdHexString);
 		sb.append("3033303800000000000000000000000000190000000000000025011411671822334119");
 		//sb.append(new SimpleDateFormat("yyMMddHHmmss").format(new Date()));
 		sb.append(new SimpleDateFormat("ddHHmmssSSSS").format(new Date()));

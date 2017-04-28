@@ -4,6 +4,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.test.nettytest.client.util.NettyClientUtil;
+
 import io.netty.channel.Channel;
 
 /**
@@ -139,7 +141,7 @@ public class ThreadInfo
 		this.endTimeString = df.format(endTime);
 
 		//计算运行时长
-		this.runDuration = getFormatTime(this.endTime - this.startTime);
+		this.runDuration = NettyClientUtil.getFormatTime(this.endTime - this.startTime);
 	}
 
 	public final String getEndTimeString()
@@ -314,39 +316,5 @@ public class ThreadInfo
 				+ ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount
 				+ ", 发送注册包个数=" + loginPackageCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数=" + abnormalPackageCount
 				+ ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数=" + heartBeatPackageCount + "]";
-	}
-
-	/**
-	 * 运行时长格式 xx小时xx分xx秒
-	 */
-	private String getFormatTime(long duration)
-	{
-		StringBuilder sb = new StringBuilder();
-		duration = duration / 1000;
-
-		//取秒
-		int s = (int) (duration % 60);
-
-		sb.append(s + "秒");
-
-		//取分钟
-		int m = (int) (duration - s > 0 ? (duration - s) / 60 : 0);
-
-		if (m > 0)
-		{
-			if (m >= 60)
-			{
-				//取小时
-				int h = (m - m % 60) / 60;
-				m = m % 60;
-				sb.insert(0, h + "小时" + m + "分钟");
-			}
-			else
-			{
-				sb.insert(0, m + "分钟");
-			}
-		}
-
-		return sb.toString();
 	}
 }
