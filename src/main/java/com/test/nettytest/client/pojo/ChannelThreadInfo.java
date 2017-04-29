@@ -36,7 +36,7 @@ public class ChannelThreadInfo
 	/**
 	 * 终止时间 毫秒
 	 */
-	private long endTime;
+	private long endTime = 0;
 	/**
 	 * 终止时间 yyyy-MM-dd HH:mm:ss
 	 */
@@ -137,13 +137,16 @@ public class ChannelThreadInfo
 
 	public final void setEndTime(long endTime)
 	{
-		this.endTime = endTime;
+		if (this.endTime == 0)
+		{
+			this.endTime = endTime;
 
-		//终止时间 yyyy-MM-dd HH:mm:ss
-		this.endTimeString = df.format(endTime);
+			//终止时间 yyyy-MM-dd HH:mm:ss
+			this.endTimeString = df.format(endTime);
 
-		//计算运行时长
-		this.runDuration = NettyClientUtil.getFormatTime(this.endTime - this.startTime);
+			//计算运行时长
+			this.runDuration = NettyClientUtil.getFormatTime(this.endTime - this.startTime);
+		}
 	}
 
 	public final String getEndTimeString()
@@ -289,18 +292,20 @@ public class ChannelThreadInfo
 	public String toString()
 	{
 		if (channel.isActive())
-			return "子线程信息： [线程ID=" + threadID + ", 连接状态=在线" + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长="
-					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
-					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
-					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
-					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+			return "子线程信息： [线程ID=" + threadID + ", 连接状态=在线" + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString
+					+ ", 运行时长=" + runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数="
+					+ disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount
+					+ ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数=" + loginPackageSendCount
+					+ ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数="
+					+ abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
 					+ heartBeatPackageCount + "]";
 		else
-			return "子线程信息： [线程ID=" + threadID + ", 连接状态=失效" + ", 开始时间=" + startTimeString + ", 失效时间=" + endTimeString + ", 运行时长="
-					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
-					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
-					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
-					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+			return "子线程信息： [线程ID=" + threadID + ", 连接状态=失效" + ", 开始时间=" + startTimeString + ", 失效时间=" + endTimeString
+					+ ", 运行时长=" + runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数="
+					+ disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount
+					+ ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数=" + loginPackageSendCount
+					+ ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数="
+					+ abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
 					+ heartBeatPackageCount + "]";
 	}
 }

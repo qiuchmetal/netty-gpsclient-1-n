@@ -1,6 +1,7 @@
 package com.test.nettytest.client.pojo;
 
 import java.text.SimpleDateFormat;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.test.nettytest.client.util.NettyClientUtil;
 
@@ -32,15 +33,18 @@ public class ConnectionThreadInfo
 	/**
 	 * 尝试连接次数
 	 */
-	private int tryToConnectCount = 0;
+//	private int tryToConnectCount = 0;
+	private AtomicInteger tryToConnectCount = new AtomicInteger();
 	/**
 	 * 成功连接次数
 	 */
-	private int connectionCount = 0;
+//	private int connectionCount = 0;
+	private AtomicInteger connectionCount = new AtomicInteger();
 	/**
 	 * 连接失败次数
 	 */
-	private int failToConnectCount = 0;
+//	private int failToConnectCount = 0;
+	private AtomicInteger failToConnectCount = new AtomicInteger();
 	/**
 	 * 时间表现格式
 	 */
@@ -92,32 +96,42 @@ public class ConnectionThreadInfo
 
 	public final int getTryToConnectCount()
 	{
-		return tryToConnectCount;
+		return tryToConnectCount.get();
 	}
 
-	public final void setTryToConnectCount(int tryToConnectCount)
+//	public final void setTryToConnectCount(int tryToConnectCount)
+//	{
+//		this.tryToConnectCount = tryToConnectCount;
+//	}
+	
+	public final int setAndGetTryToConnectCount()
 	{
-		this.tryToConnectCount = tryToConnectCount;
+		return this.tryToConnectCount.incrementAndGet();
 	}
 
 	public final int getConnectionCount()
 	{
-		return connectionCount;
+		return connectionCount.get();
 	}
 
-	public final void setConnectionCount(int connectionCount)
+//	public final void setConnectionCount(int connectionCount)
+//	{
+//		this.connectionCount = connectionCount;
+//	}
+	
+	public final int setAndGetConnectionCount()
 	{
-		this.connectionCount = connectionCount;
+		return this.connectionCount.incrementAndGet();
 	}
 
 	public final int getFailToConnectCount()
 	{
-		return failToConnectCount;
+		return failToConnectCount.get();
 	}
 
-	public final void setFailToConnectCount(int failToConnectCount)
+	public final int setAndGetFailToConnectCount()
 	{
-		this.failToConnectCount = failToConnectCount;
+		return this.failToConnectCount.incrementAndGet();
 	}
 
 	@Override

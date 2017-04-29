@@ -9,7 +9,7 @@ import java.util.Date;
 /**
  * 用来记录管道线程信息的文件类
  */
-public class ThreadInfoFile
+public class ChannelThreadInfoFile
 {
 	public static void writeToTxtFile(String content)
 	{

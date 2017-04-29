@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
@@ -23,13 +24,13 @@ public class CreateThreadInfoFileTask implements Runnable
 	/**
 	 * 管道线程统计信息
 	 */
-	private ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet;
+	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
 
 	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo,
-			ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet)
+			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
 	{
 		this.connectionThreadInfo = connectionThreadInfo;
-		this.channelThreadInfoSet = channelThreadInfoSet;
+		this.channelThreadInfodDeque = channelThreadInfodDeque;
 	}
 
 	/**
@@ -47,12 +48,13 @@ public class CreateThreadInfoFileTask implements Runnable
 		tis.setFailToConnectCount(connectionThreadInfo.getFailToConnectCount());//连接失败次数
 
 		//管道线程
-		for (ChannelThreadInfo t : channelThreadInfoSet)
+		for (ChannelThreadInfo t : channelThreadInfodDeque)
 		{
 			//管道线程创建总数
 			tis.setChannelThreadsCount(tis.getChannelThreadsCount() + 1);
 			//当前连接总数
-			tis.setCurrentChannelActiveCount(tis.getCurrentChannelActiveCount() + (t.getChannel().isActive() ? 1 : 0));
+			tis.setCurrentChannelActiveCount(tis.getCurrentChannelActiveCount()
+					+ ((t.getChannel() != null && t.getChannel().isActive()) ? 1 : 0));
 			//断开次数
 			tis.setDisconnectionCount(tis.getDisconnectionCount() + t.getDisconnectionCount());
 			//模拟断开次数
@@ -88,18 +90,18 @@ public class CreateThreadInfoFileTask implements Runnable
 		String fileName = (new SimpleDateFormat("yyyy-MM-dd-HH")).format(new Date());
 
 		//创建管道线程信息明细记录文件
-		File threadInfoFile = new File("ChannelThreadInfo_" + fileName + ".txt");
-		try
-		{
-			if (!threadInfoFile.exists())
-			{
-				threadInfoFile.createNewFile();
-			}
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
+//		File threadInfoFile = new File("ChannelThreadInfo_" + fileName + ".txt");
+//		try
+//		{
+//			if (!threadInfoFile.exists())
+//			{
+//				threadInfoFile.createNewFile();
+//			}
+//		}
+//		catch (Exception e)
+//		{
+//			e.printStackTrace();
+//		}
 
 		//创建线程信息统计记录文件
 		File threadInfoStatisticsFile = new File("ThreadInfoStatistics_" + fileName + ".txt");
@@ -109,11 +111,16 @@ public class CreateThreadInfoFileTask implements Runnable
 			{
 				threadInfoStatisticsFile.createNewFile();
 			}
-			//创建之后，立即写入内容
-			FileWriter writer = new FileWriter(threadInfoStatisticsFile, true);
-			BufferedWriter bufferedWriter = new BufferedWriter(writer);
-			bufferedWriter.write(doThreadStatistics() + "\n\r\n\r\n\r\n\r");
-			bufferedWriter.close();
+
+			//有数据了再写入文件
+			if (connectionThreadInfo.getStartTime() > 0)
+			{
+				//创建之后，立即写入内容
+				FileWriter writer = new FileWriter(threadInfoStatisticsFile, true);
+				BufferedWriter bufferedWriter = new BufferedWriter(writer);
+				bufferedWriter.write(doThreadStatistics() + "\n\r\n\r\n\r\n\r");
+				bufferedWriter.close();
+			}
 		}
 		catch (Exception e)
 		{

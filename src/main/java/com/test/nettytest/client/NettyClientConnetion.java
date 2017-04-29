@@ -2,8 +2,11 @@ package com.test.nettytest.client;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.channelhandler.LoginHandler;
@@ -31,24 +34,31 @@ public class NettyClientConnetion
 	/**
 	 * 管道线程集合
 	 */
-	private ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet;
+	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
 
 	private static SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 
 	private Bootstrap bootstrap;
 
 	private final int CONNECTION_COUNT = NettyClientUtil.CONNETION_COUNT; //需要保持的连接数
+	
+	//执行 IO 之外的业务线程
+	public ScheduledExecutorService taskService;
 
 	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo,
-			ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet)
+			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
 	{
 		this.connectionThreadInfo = connectionThreadInfo;
+		this.channelThreadInfodDeque = channelThreadInfodDeque;
+
 		//连接线程开始时间
 		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
 
 		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：["
 				+ NettyClientUtil.CONNETION_COUNT + "]");
+		
+		taskService = Executors.newScheduledThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
 	}
 
 	public void start()
@@ -65,7 +75,7 @@ public class NettyClientConnetion
 			protected void initChannel(SocketChannel ch) throws Exception
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
-				ch.pipeline().addLast(new LoginHandler(channelThreadInfoSet, NettyClientConnetion.this));
+				ch.pipeline().addLast(new LoginHandler(channelThreadInfodDeque, NettyClientConnetion.this));
 			}
 		});
 
@@ -77,9 +87,9 @@ public class NettyClientConnetion
 
 		//使用调度线程进行连接
 		for (int i = 0; i < CONNECTION_COUNT; i++)
-			group.schedule(() -> doConnect(), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
-					TimeUnit.SECONDS);
-				//		group.schedule(()->doConnect(), 0, TimeUnit.SECONDS);
+//			group.schedule(() -> doConnect(), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
+//					TimeUnit.SECONDS);
+						group.schedule(()->doConnect(), 0, TimeUnit.SECONDS);
 
 		//		ChannelFuture f = null;
 		//
@@ -124,7 +134,7 @@ public class NettyClientConnetion
 		System.out.println("当前连接线程：" + Thread.currentThread().getName() + "  " + Thread.currentThread().getId());
 
 		//尝试连接次数
-		connectionThreadInfo.setTryToConnectCount(connectionThreadInfo.getTryToConnectCount() + 1);
+		connectionThreadInfo.setAndGetTryToConnectCount();
 
 		//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 准备连接 Netty Server --> " + host + ":" + port);
 
@@ -137,7 +147,7 @@ public class NettyClientConnetion
 				if (futureListener.isSuccess())
 				{
 					//成功连接次数
-					connectionThreadInfo.setConnectionCount(connectionThreadInfo.getConnectionCount() + 1);
+					connectionThreadInfo.setAndGetConnectionCount();
 
 					//					channel = futureListener.channel();
 
@@ -153,7 +163,7 @@ public class NettyClientConnetion
 							+ "] 连接失败，10秒后尝试重连。");
 
 					//连接失败次数
-					connectionThreadInfo.setFailToConnectCount(connectionThreadInfo.getFailToConnectCount() + 1);
+					connectionThreadInfo.setAndGetFailToConnectCount();
 					//断开10秒后进行重连
 					futureListener.channel().eventLoop().schedule(new Runnable()
 					{
