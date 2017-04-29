@@ -199,14 +199,23 @@ public class ChannelThreadInfo
 		this.disconnectionOfAbnormalCount = disconnectionOfAbnormalCount;
 	}
 
+	/*
+	 ***************************************************
+	 */
+
 	public final int getLoginPackageSendCount()
 	{
 		return loginPackageSendCount;
 	}
 
-	public final void setLoginPackageSendCount(int loginPackageSendCount)
+//	public final void setLoginPackageSendCount(int loginPackageSendCount)
+//	{
+//		this.loginPackageSendCount = loginPackageSendCount;
+//	}
+
+	public final void incrementLoginPackageSendCount()
 	{
-		this.loginPackageSendCount = loginPackageSendCount;
+		this.loginPackageSendCount++;
 	}
 
 	public final int getLoginPackageReceivedCount()
@@ -214,9 +223,14 @@ public class ChannelThreadInfo
 		return loginPackageReceivedCount;
 	}
 
-	public final void setLoginPackageReceivedCount(int loginPackageReceivedCount)
+//	public final void setLoginPackageReceivedCount(int loginPackageReceivedCount)
+//	{
+//		this.loginPackageReceivedCount = loginPackageReceivedCount;
+//	}
+
+	public final void incrementLoginPackageReceivedCount()
 	{
-		this.loginPackageReceivedCount = loginPackageReceivedCount;
+		this.loginPackageReceivedCount++;
 	}
 
 	public final int getTimingPackageCount()
@@ -224,9 +238,14 @@ public class ChannelThreadInfo
 		return timingPackageCount;
 	}
 
-	public final void setTimingPackageCount(int timingPackageCount)
+//	public final void setTimingPackageCount(int timingPackageCount)
+//	{
+//		this.timingPackageCount = timingPackageCount;
+//	}
+
+	public final void incrementTimingPackageCount()
 	{
-		this.timingPackageCount = timingPackageCount;
+		this.timingPackageCount++;
 	}
 
 	public final int getAbnormalPackageCount()
@@ -234,9 +253,14 @@ public class ChannelThreadInfo
 		return abnormalPackageCount;
 	}
 
-	public final void setAbnormalPackageCount(int abnormalPackageCount)
+//	public final void setAbnormalPackageCount(int abnormalPackageCount)
+//	{
+//		this.abnormalPackageCount = abnormalPackageCount;
+//	}
+
+	public final void incrementAbnormalPackageCount()
 	{
-		this.abnormalPackageCount = abnormalPackageCount;
+		this.abnormalPackageCount++;
 	}
 
 	public final int getAbnormalResponsePackageCount()
@@ -244,9 +268,14 @@ public class ChannelThreadInfo
 		return abnormalResponsePackageCount;
 	}
 
-	public final void setAbnormalResponsePackageCount(int abnormalResponsePackageCount)
+//	public final void setAbnormalResponsePackageCount(int abnormalResponsePackageCount)
+//	{
+//		this.abnormalResponsePackageCount = abnormalResponsePackageCount;
+//	}
+
+	public final void incrementAbnormalResponsePackageCount()
 	{
-		this.abnormalResponsePackageCount = abnormalResponsePackageCount;
+		this.abnormalResponsePackageCount++;
 	}
 
 	public final int getHeartBeatPackageCount()
@@ -254,9 +283,14 @@ public class ChannelThreadInfo
 		return heartBeatPackageCount;
 	}
 
-	public final void setHeartBeatPackageCount(int heartBeatPackageCount)
+//	public final void setHeartBeatPackageCount(int heartBeatPackageCount)
+//	{
+//		this.heartBeatPackageCount = heartBeatPackageCount;
+//	}
+
+	public final void incrementHeartBeatPackageCount()
 	{
-		this.heartBeatPackageCount = heartBeatPackageCount;
+		this.heartBeatPackageCount++;
 	}
 
 	//	public List<Channel> getChannelList()
