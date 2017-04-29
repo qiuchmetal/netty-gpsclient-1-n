@@ -7,7 +7,7 @@ import com.test.nettytest.client.util.NettyClientUtil;
 import io.netty.channel.Channel;
 
 /**
- * 每条线程收集到信息
+ * 管道线程信息
  */
 public class ChannelThreadInfo
 {
@@ -16,7 +16,7 @@ public class ChannelThreadInfo
 	 */
 	private String threadID;
 	/**
-	 * 当前连接
+	 * 当前管道连接
 	 */
 	private Channel channel;
 	//	private ConcurrentSkipListSet<Channel> channelSet = new ConcurrentSkipListSet<Channel>();

@@ -7,19 +7,17 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * 用来记录线程信息的文件类
+ * 用来记录管道线程信息的文件类
  */
 public class ThreadInfoFile
 {
 	public static void writeToTxtFile(String content)
 	{
 		Date date = new Date();
-//		String h = (new SimpleDateFormat("HH")).format(date).substring(0, 1);
-//		String m = (new SimpleDateFormat("mm")).format(date).substring(0, 1);
 		
 		String fileName = (new SimpleDateFormat("yyyy-MM-dd-HH")).format(new Date());
-		//创建文件
-		File file = new File("ThreadInfo_" + fileName + ".txt");
+		//查看是否已经创建了文件，这里不负责创建文件，创建文件在 CreateThreadInfoFileTask 类里
+		File file = new File("ChannelThreadInfo_" + fileName + ".txt");
 		try
 		{
 			if (!file.exists())

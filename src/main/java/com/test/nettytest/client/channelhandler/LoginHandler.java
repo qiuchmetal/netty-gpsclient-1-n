@@ -4,13 +4,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.NettyClientConnetion;
 import com.test.nettytest.client.pojo.NettyClientCommand;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.util.NettyClientUtil;
-import com.test.nettytest.client.util.ThreadInfoFile;
+import com.test.nettytest.client.util.ChannelThreadInfoFile;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -30,9 +31,13 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 
 	private volatile ScheduledFuture<?> threadInfoOutputTask; //记录线程的一些信息任务
 	/**
+	 * 管道线程集合
+	 */
+	private ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet;
+	/**
 	 * 记录当前线程的一些信息
 	 */
-	private ChannelThreadInfo threadInfo;
+	private ChannelThreadInfo channelThreadInfo;
 	/**
 	 * 指令生成类
 	 */
@@ -66,16 +71,9 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 	 */
 	private List<String> abnomalPackageList = new ArrayList<String>();
 
-	public LoginHandler(ChannelThreadInfo threadInfo, NettyClientCommand clientCommand, NettyClientConnetion client)
+	public LoginHandler(ConcurrentSkipListSet<ChannelThreadInfo> channelThreadInfoSet, NettyClientConnetion client)
 	{
-		this.threadInfo = threadInfo;
-		this.clientCommand = clientCommand;
-		this.client = client;
-	}
-
-	public LoginHandler(ChannelThreadInfo threadInfo, NettyClientConnetion client)
-	{
-		this.threadInfo = threadInfo;
+		this.channelThreadInfoSet = channelThreadInfoSet;
 		this.client = client;
 	}
 
@@ -306,7 +304,7 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		{
 			//线程当前统计时间
 			threadInfo.setEndTime(System.currentTimeMillis());
-			ThreadInfoFile.writeToTxtFile(threadInfo.toString());
+			ChannelThreadInfoFile.writeToTxtFile(threadInfo.toString());
 			//			System.out.println("线程信息已写入文件。");
 		}
 	}
