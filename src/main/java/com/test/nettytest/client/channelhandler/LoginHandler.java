@@ -129,8 +129,8 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		{
 			ctx.disconnect();
 			threadInfo.setDisconnectionOfHeartBeatCount(threadInfo.getDisconnectionOfHeartBeatCount() + 1);
-			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + clientCommand.getBusId()
-					+ "] 因为没有及时收到心跳而断开连接！！运行时长："
+			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ["
+					+ clientCommand.getBusId() + "] 因为没有及时收到心跳而断开连接！！运行时长："
 					+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
 		}
 	}
@@ -152,8 +152,8 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		{
 			ctx.disconnect();
 			threadInfo.setDisconnectInRandomTimeCount(threadInfo.getDisconnectInRandomTimeCount() + 1);
-			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + clientCommand.getBusId()
-					+ "] 模拟设备不稳定而断开连接！！运行时长："
+			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ["
+					+ clientCommand.getBusId() + "] 模拟设备不稳定而断开连接！！运行时长："
 					+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
 
 			//取消之前的任务
@@ -261,9 +261,10 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 					abnormalMsg = "异常开启时间: [" + df.format(date.getTime() + (long) (initialDelay * 1000)) + "] 超时时间： ["
 							+ df.format(date.getTime() + (long) ((initialDelay + delay * 3) * 1000)) + "]";
 					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ["
-							+ clientCommand.getBusId() + "] " + abnormalMsg + " ！！因为没有及时收到异常应答而断开连接！！运行时长："
-							+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知") + "。期间接收到的包："
-							+ abnomalPackageList.toString());
+							+ clientCommand.getBusId() + "] " + abnormalMsg
+							+ " ！！因为没有及时收到异常应答而断开连接！！运行时长：" + (startTime > 0
+									? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知")
+							+ "。期间接收到的包：" + abnomalPackageList.toString());
 					abnomalPackageList.clear();
 					isAbnomalTime = false;
 					ctx.disconnect();
@@ -312,8 +313,9 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception
 	{
-		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + clientCommand.getBusId()
-				+ "] 失去连接。运行时长：" + (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ["
+				+ clientCommand.getBusId() + "] 失去连接。运行时长："
+				+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
 		//断开次数
 		threadInfo.setDisconnectionCount(threadInfo.getDisconnectionCount() + 1);
 
@@ -356,8 +358,11 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		this.startTime = System.currentTimeMillis();
 
 		//在设定的一个时间段内的一个随机时间点进行注册
-		logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx),
-				(long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)), NettyClientUtil.LOGIN_INTERVAL,
+		//		logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx),
+		//				(long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)), NettyClientUtil.LOGIN_INTERVAL,
+		//				TimeUnit.SECONDS);
+		//立即进行注册
+		logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL,
 				TimeUnit.SECONDS);
 
 		//模拟设备因为不稳定而断开连接（一次性任务）
@@ -412,8 +417,9 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			//			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx), NettyClientUtil.ABNORMAL_INTERVAL,
 			//					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 			long initialDelay = (long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1));
-			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx, initialDelay, NettyClientUtil.ABNORMAL_INTERVAL),
-					initialDelay, NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
+			abnormalTask = ctx.executor().scheduleWithFixedDelay(
+					new AbnormalTask(ctx, initialDelay, NettyClientUtil.ABNORMAL_INTERVAL), initialDelay,
+					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 
 			//发送定时定距消息
 			if (NettyClientUtil.TIMING_INTERVAL_FIXED == 1) //按固定的时间间隔进行发包
@@ -459,16 +465,18 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			//			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx), NettyClientUtil.ABNORMAL_INTERVAL,
 			//					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 			long initialDelay = (long) (NettyClientUtil.ABNORMAL_INTERVAL * (Math.random() * 0.9 + 0.1));
-			abnormalTask = ctx.executor().scheduleWithFixedDelay(new AbnormalTask(ctx, initialDelay, NettyClientUtil.ABNORMAL_INTERVAL),
-					initialDelay, NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
+			abnormalTask = ctx.executor().scheduleWithFixedDelay(
+					new AbnormalTask(ctx, initialDelay, NettyClientUtil.ABNORMAL_INTERVAL), initialDelay,
+					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 		}
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception
 	{
-		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + clientCommand.getBusId()
-				+ "] 因为异常而关闭连接。运行时长：" + (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] ["
+				+ clientCommand.getBusId() + "] 因为异常而关闭连接。运行时长："
+				+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
 
 		//		ctx.close();
 		ctx.fireExceptionCaught(cause);
