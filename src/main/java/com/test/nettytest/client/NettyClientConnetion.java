@@ -85,9 +85,9 @@ public class NettyClientConnetion
 
 		//使用调度线程进行连接
 		for (int i = 0; i < CONNECTION_COUNT; i++)
-//			group.schedule(() -> doConnect(), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
-//					TimeUnit.SECONDS);
-						group.schedule(()->doConnect(), 0, TimeUnit.SECONDS);
+			group.schedule(() -> doConnect(), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
+					TimeUnit.SECONDS);
+//						group.schedule(()->doConnect(), 0, TimeUnit.SECONDS);
 
 		//		ChannelFuture f = null;
 		//
@@ -129,7 +129,7 @@ public class NettyClientConnetion
 		String host = NettyClientUtil.SERVER_IP;
 		int port = NettyClientUtil.SERVER_PORT;
 
-		System.out.println("当前连接线程：" + Thread.currentThread().getName() + "  " + Thread.currentThread().getId());
+//		System.out.println("当前连接线程：" + Thread.currentThread().getName() + "  " + Thread.currentThread().getId());
 
 		//尝试连接次数
 		connectionThreadInfo.setAndGetTryToConnectCount();

@@ -197,8 +197,8 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 
 				if (NettyClientUtil.TIMING_INTERVAL_FIXED != 1) //发包时间不固定
 				{
-					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date())
-							+ "] 不固定时间间隔发送定时定距信息！-->>");
+//					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date())
+//							+ "] 不固定时间间隔发送定时定距信息！-->>");
 
 					//取消之前的任务
 					if (timingAndFixedDistanceTask != null)
@@ -215,8 +215,8 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 				}
 				else
 				{
-					System.out.println(
-							"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送定时定距信息！-->>");
+//					System.out.println(
+//							"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送定时定距信息！-->>");
 				}
 
 			}
@@ -369,9 +369,9 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 
 		this.startTime = System.currentTimeMillis();
 
-		String currentThreadName = Thread.currentThread().getName();
+//		String currentThreadName = Thread.currentThread().getName();
 
-		System.out.println("当前管道连接线程：" + currentThreadName);
+//		System.out.println("当前管道连接线程：" + currentThreadName);
 		//记录端口号，
 		channelThreadInfo.setThreadID(((SocketChannel) ctx.channel()).localAddress().getPort() + "");
 		//记录当前通道
