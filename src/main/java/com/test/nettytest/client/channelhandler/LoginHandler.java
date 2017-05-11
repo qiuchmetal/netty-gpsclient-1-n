@@ -98,8 +98,8 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			try
 			{
 				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getLoginBytes()));
-				//				System.out.println(
-				//						"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
+//				System.out.println(
+//						"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
 				//发送的注册包个数
 				channelThreadInfo.incrementLoginPackageSendCount();
 			}
@@ -418,11 +418,11 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 		if (isAbnomalTime)
 			abnomalPackageList.add(ByteBufUtil.hexDump(bytes));
 
-		//		System.out.println(Thread.currentThread().getName() + "接收到的信息：");
+//				System.out.println(Thread.currentThread().getName() + "接收到的信息：");
 		//		for (byte b : bytes)
 		//			System.out.print(b + ",");
 
-		//				System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 接收到的信息："+ByteBufUtil.hexDump(bytes));
+//						System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 接收到的信息："+ByteBufUtil.hexDump(bytes));
 
 		//接收到了注册应答信息
 		if (bytes.length > 8 && bytes[7] == -96 && logInTask != null)
@@ -431,7 +431,7 @@ public class LoginHandler extends ChannelInboundHandlerAdapter
 			isLogin = true;
 			//收到的注册应答包个数
 			channelThreadInfo.incrementLoginPackageReceivedCount();
-			//System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 已注册成功。");
+			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 已注册成功。");
 
 			//一段时间后没有收到心跳，就断开连接
 			//			disconnectWithoutHeartBeatTask = ctx.executor().scheduleWithFixedDelay(new DisconnectWithoutHeartBeatTask(ctx),

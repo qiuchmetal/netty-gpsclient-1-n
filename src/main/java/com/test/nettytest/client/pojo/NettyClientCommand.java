@@ -134,6 +134,7 @@ public class NettyClientCommand
 			e.printStackTrace();
 		}
 
+//		System.out.println(busIdHexString+" : faf5" + sb.toString());
 		return NettyClientUtil.hexStringToByteArray("faf5" + sb.toString());
 	}
 
@@ -160,6 +161,7 @@ public class NettyClientCommand
 			e.printStackTrace();
 		}
 
+//		System.out.println(busIdHexString+" : faf5" + sb.toString());
 		return NettyClientUtil.hexStringToByteArray("faf5" + sb.toString());
 	}
 
