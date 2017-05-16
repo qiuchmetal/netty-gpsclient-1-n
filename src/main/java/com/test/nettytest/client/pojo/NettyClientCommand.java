@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.test.nettytest.client.util.NettyClientUtil;
 
+import io.netty.handler.codec.AsciiHeadersEncoder.NewlineType;
+
 public class NettyClientCommand
 {
 	/**
@@ -136,6 +138,34 @@ public class NettyClientCommand
 
 //		System.out.println(busIdHexString+" : faf5" + sb.toString());
 		return NettyClientUtil.hexStringToByteArray("faf5" + sb.toString());
+	}
+	
+	/**
+	 * 以输入的车号产生注册信息
+	 */
+	public static String getLoginHexString(String busId, long currentTimestamp)
+	{		
+		StringBuilder sb = new StringBuilder();
+		sb.append("001000a7002002ff00000000000000005180000101");
+		sb.append(NettyClientUtil.byteArrayToHexString(busId.getBytes()));
+		sb.append("303030305a000000010000000000000001070000000000000000000000000000000000");
+		//sb.append(new SimpleDateFormat("yyMMddHHmmss").format(new Date()));
+		sb.append(new SimpleDateFormat("yyMMddHHmmss").format(new Date(currentTimestamp)));
+		sb.append("00000000000000008806ffff000003075431363132323739310000000000000000000000000000000000000000000000");
+		sb.append(NettyClientUtil.byteArrayToHexString(busId.getBytes()));
+		sb.append("000000000000000000000000000000000000000000000000000300000700000000000000000000000000000000");
+
+		//计算校验位
+		try
+		{
+			sb.append(NettyClientUtil.getCheckString(sb.toString()));
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+
+		return "faf5" + sb.toString();
 	}
 
 	/**

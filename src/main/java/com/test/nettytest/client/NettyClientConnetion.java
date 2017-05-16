@@ -2,14 +2,16 @@ package com.test.nettytest.client;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.test.nettytest.client.channelhandler.LoginHandler;
+import com.test.nettytest.client.channelhandler.RealDataHandler;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.ConnectionThreadInfo;
+import com.test.nettytest.client.pojo.GPSDataLineFromAFile;
 import com.test.nettytest.client.util.NettyClientUtil;
 
 import io.netty.bootstrap.Bootstrap;
@@ -33,12 +35,20 @@ public class NettyClientConnetion
 	 * 管道线程集合
 	 */
 	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
+	/**
+	 * 从目录下加载到的车号队列
+	 */
+	public ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque;
+	/**
+	 * 一共多少辆车，每辆车一个连接
+	 */
+	private int busCount;
 
 	private static SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 
 	private Bootstrap bootstrap;
 
-	private final int CONNECTION_COUNT = NettyClientUtil.CONNETION_COUNT; //需要保持的连接数
+//	private final int CONNECTION_COUNT = NettyClientUtil.CONNETION_COUNT; //需要保持的连接数
 	
 	//执行 IO 之外的业务线程
 	public ScheduledExecutorService taskService;
@@ -58,6 +68,26 @@ public class NettyClientConnetion
 		
 		taskService = Executors.newScheduledThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
 	}
+	
+	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo,
+			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque,
+			ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque, int busCount)
+	{
+		this.connectionThreadInfo = connectionThreadInfo;
+		this.channelThreadInfodDeque = channelThreadInfodDeque;
+		this.busDeque = busDeque;
+		this.busCount = busCount;
+
+		//连接线程开始时间
+		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
+		
+		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：["
+				+ busCount + "]");
+		
+		taskService = Executors.newScheduledThreadPool(busCount/100);
+	}
+	
 
 	public void start()
 	{
@@ -73,7 +103,8 @@ public class NettyClientConnetion
 			protected void initChannel(SocketChannel ch) throws Exception
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
-				ch.pipeline().addLast(new LoginHandler(channelThreadInfodDeque, NettyClientConnetion.this));
+//				ch.pipeline().addLast(new LoginHandler(channelThreadInfodDeque, NettyClientConnetion.this));
+				ch.pipeline().addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this));
 			}
 		});
 
@@ -83,11 +114,11 @@ public class NettyClientConnetion
 		//		for (int i = 0; i < CONNECTION_COUNT; i++)
 		//			doConnect();
 
-		//使用调度线程进行连接
-		for (int i = 0; i < CONNECTION_COUNT; i++)
+		//使用调度线程进行连接，每个车号一个连接
+		for (int i = 0; i < busCount; i++)
 			group.schedule(() -> doConnect(), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
 					TimeUnit.SECONDS);
-//						group.schedule(()->doConnect(), 0, TimeUnit.SECONDS);
+		
 
 		//		ChannelFuture f = null;
 		//
