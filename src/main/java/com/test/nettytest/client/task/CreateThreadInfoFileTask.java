@@ -6,7 +6,6 @@ import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.ConnectionThreadInfo;
@@ -60,26 +59,31 @@ public class CreateThreadInfoFileTask implements Runnable
 			//模拟断开次数
 			tis.setDisconnectInRandomTimeCount(
 					tis.getDisconnectInRandomTimeCount() + t.getDisconnectInRandomTimeCount());
-			//因没及时收到心跳而断开次数
-			tis.setDisconnectionOfHeartBeatCount(
-					tis.getDisconnectionOfHeartBeatCount() + t.getDisconnectionOfHeartBeatCount());
-			//因没及时收到异常应答而断开次数
-			tis.setDisconnectionOfAbnormalCount(
-					tis.getDisconnectionOfAbnormalCount() + t.getDisconnectionOfAbnormalCount());
+//			//因没及时收到心跳而断开次数
+//			tis.setDisconnectionOfHeartBeatCount(
+//					tis.getDisconnectionOfHeartBeatCount() + t.getDisconnectionOfHeartBeatCount());
+//			//因没及时收到异常应答而断开次数
+//			tis.setDisconnectionOfAbnormalCount(
+//					tis.getDisconnectionOfAbnormalCount() + t.getDisconnectionOfAbnormalCount());
 
 			//发送的注册包个数
-			tis.setLoginPackageSendCount(tis.getLoginPackageSendCount() + t.getLoginPackageSendCount());
+			tis.setLoginCount(tis.getLoginCount() + t.getLoginCount());
 			//收到的注册应答包个数
-			tis.setLoginPackageReceivedCount(tis.getLoginPackageReceivedCount() + t.getLoginPackageReceivedCount());
+			tis.setLoginResponseCount(tis.getLoginResponseCount() + t.getLoginResponseCount());
+			//发送的准备就绪包个数
+			tis.setInReadyCount(tis.getInReadyCount() + t.getInReadyCount());
 			//发送的定时定距包个数
-			tis.setTimingPackageCount(tis.getTimingPackageCount() + t.getTimingPackageCount());
+			tis.setTimingCount(tis.getTimingCount() + t.getTimingCount());
+			//发送的校时请求包个数
+			tis.setAdjustTimeCount(tis.getAdjustTimeCount() + t.getAdjustTimeCount());
+			//接收到的校时应答包个数
+			tis.setAdjustTimeResponseCount(tis.getAdjustTimeResponseCount() + t.getAdjustTimeResponseCount());
 			//发送的异常包个数
-			tis.setAbnormalPackageCount(tis.getAbnormalPackageCount() + t.getAbnormalPackageCount());
+			tis.setAbnormalCount(tis.getAbnormalCount() + t.getAbnormalCount());
 			//接收到的异常应答包个数
-			tis.setAbnormalResponsePackageCount(
-					tis.getAbnormalResponsePackageCount() + t.getAbnormalResponsePackageCount());
+			tis.setAbnormalResponseCount(tis.getAbnormalResponseCount() + t.getAbnormalResponseCount());
 			//接收到的心跳个数
-			tis.setHeartBeatPackageCount(tis.getHeartBeatPackageCount() + t.getHeartBeatPackageCount());
+			tis.setHeartBeatCount(tis.getHeartBeatCount() + t.getHeartBeatCount());
 		}
 		return tis.toString();
 	}

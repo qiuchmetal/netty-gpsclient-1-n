@@ -19,12 +19,13 @@ public class ChannelThreadInfo
 	 * 当前管道连接
 	 */
 	private Channel channel;
-	//	private ConcurrentSkipListSet<Channel> channelSet = new ConcurrentSkipListSet<Channel>();
-	//	private List<Channel> channelList = new ArrayList<Channel>();
+	// private ConcurrentSkipListSet<Channel> channelSet = new
+	// ConcurrentSkipListSet<Channel>();
+	// private List<Channel> channelList = new ArrayList<Channel>();
 	/**
 	 * 当前活跃连接数
 	 */
-	//private int currentActiveChannelCount;
+	// private int currentActiveChannelCount;
 	/**
 	 * 起始时间 毫秒
 	 */
@@ -70,28 +71,42 @@ public class ChannelThreadInfo
 	/**
 	 * 发送的注册包个数
 	 */
-	private int loginPackageSendCount = 0;
+	private int loginCount = 0;
 	/**
 	 * 接收的注册应答包个数
 	 */
-	private int loginPackageReceivedCount = 0;
+	private int loginResponseCount = 0;
+	/**
+	 * 发送的准备就绪包个数
+	 */
+	private int inReadyCount = 0;
 	/**
 	 * 发送的定时定距包个数
 	 */
-	private int timingPackageCount = 0;
+	private int timingCount = 0;
 	/**
-	 * 发送的异常包个数
+	 * 发送的校时请求包个数
 	 */
-	private int abnormalPackageCount = 0;
+	private int adjustTimeCount = 0;
 	/**
-	 * 接收到的异常应答包个数
+	 * 接收到的校时应答包个数
 	 */
-	private int abnormalResponsePackageCount = 0;
+	private int adjustTimeResponseCount = 0;
+	/**
+	 * 发送的关键数据包个数
+	 */
+	private int abnormalCount = 0;
+	/**
+	 * 接收到的关键数据应答包个数
+	 */
+	private int abnormalResponseCount = 0;
 	/**
 	 * 接收到的心跳个数
 	 */
-	private int heartBeatPackageCount = 0;
-
+	private int heartBeatCount = 0;
+	/*
+	 ***************************************************
+	 */
 	/**
 	 * 时间表现格式
 	 */
@@ -126,7 +141,7 @@ public class ChannelThreadInfo
 	{
 		this.startTime = startTime;
 
-		//起始时间 yyyy-MM-dd HH:mm:ss
+		// 起始时间 yyyy-MM-dd HH:mm:ss
 		this.startTimeString = df.format(startTime);
 	}
 
@@ -141,10 +156,10 @@ public class ChannelThreadInfo
 		{
 			this.endTime = endTime;
 
-			//终止时间 yyyy-MM-dd HH:mm:ss
+			// 终止时间 yyyy-MM-dd HH:mm:ss
 			this.endTimeString = df.format(endTime);
 
-			//计算运行时长
+			// 计算运行时长
 			this.runDuration = NettyClientUtil.getFormatTime(this.endTime - this.startTime);
 		}
 	}
@@ -159,14 +174,23 @@ public class ChannelThreadInfo
 		return runDuration;
 	}
 
+	/*
+	 ***************************************************
+	 */
+
 	public final int getDisconnectionCount()
 	{
 		return disconnectionCount;
 	}
 
-	public final void setDisconnectionCount(int disconnectionCount)
+//	public final void setDisconnectionCount(int disconnectionCount)
+//	{
+//		this.disconnectionCount = disconnectionCount;
+//	}
+
+	public final void incrementDisconnectionCount()
 	{
-		this.disconnectionCount = disconnectionCount;
+		this.disconnectionCount++;
 	}
 
 	public final int getDisconnectInRandomTimeCount()
@@ -174,9 +198,14 @@ public class ChannelThreadInfo
 		return disconnectInRandomTimeCount;
 	}
 
-	public final void setDisconnectInRandomTimeCount(int disconnectInRandomTimeCount)
+//	public final void setDisconnectInRandomTimeCount(int disconnectInRandomTimeCount)
+//	{
+//		this.disconnectInRandomTimeCount = disconnectInRandomTimeCount;
+//	}
+
+	public final void incrementDisconnectInRandomTimeCount()
 	{
-		this.disconnectInRandomTimeCount = disconnectInRandomTimeCount;
+		this.disconnectInRandomTimeCount++;
 	}
 
 	public final int getDisconnectionOfHeartBeatCount()
@@ -203,143 +232,185 @@ public class ChannelThreadInfo
 	 ***************************************************
 	 */
 
-	public final int getLoginPackageSendCount()
+	public final int getLoginCount()
 	{
-		return loginPackageSendCount;
+		return loginCount;
 	}
 
-//	public final void setLoginPackageSendCount(int loginPackageSendCount)
-//	{
-//		this.loginPackageSendCount = loginPackageSendCount;
-//	}
-
-	public final void incrementLoginPackageSendCount()
+	public final void incrementLoginCount()
 	{
-		this.loginPackageSendCount++;
+		this.loginCount++;
 	}
 
-	public final int getLoginPackageReceivedCount()
+	public final int getLoginResponseCount()
 	{
-		return loginPackageReceivedCount;
+		return loginResponseCount;
 	}
 
-//	public final void setLoginPackageReceivedCount(int loginPackageReceivedCount)
-//	{
-//		this.loginPackageReceivedCount = loginPackageReceivedCount;
-//	}
-
-	public final void incrementLoginPackageReceivedCount()
+	public final void incrementLoginResponseCount()
 	{
-		this.loginPackageReceivedCount++;
+		this.loginResponseCount++;
 	}
 
-	public final int getTimingPackageCount()
+	public final int getTimingCount()
 	{
-		return timingPackageCount;
+		return timingCount;
 	}
 
-//	public final void setTimingPackageCount(int timingPackageCount)
-//	{
-//		this.timingPackageCount = timingPackageCount;
-//	}
-
-	public final void incrementTimingPackageCount()
+	public final void incrementTimingCount()
 	{
-		this.timingPackageCount++;
+		this.timingCount++;
 	}
 
-	public final int getAbnormalPackageCount()
+	public final int getAbnormalCount()
 	{
-		return abnormalPackageCount;
+		return abnormalCount;
 	}
 
-//	public final void setAbnormalPackageCount(int abnormalPackageCount)
-//	{
-//		this.abnormalPackageCount = abnormalPackageCount;
-//	}
-
-	public final void incrementAbnormalPackageCount()
+	public final void incrementAbnormalCount()
 	{
-		this.abnormalPackageCount++;
+		this.abnormalCount++;
 	}
 
-	public final int getAbnormalResponsePackageCount()
+	public final int getAbnormalResponseCount()
 	{
-		return abnormalResponsePackageCount;
+		return abnormalResponseCount;
 	}
 
-//	public final void setAbnormalResponsePackageCount(int abnormalResponsePackageCount)
-//	{
-//		this.abnormalResponsePackageCount = abnormalResponsePackageCount;
-//	}
-
-	public final void incrementAbnormalResponsePackageCount()
+	public final void incrementAbnormalResponseCount()
 	{
-		this.abnormalResponsePackageCount++;
+		this.abnormalResponseCount++;
 	}
 
-	public final int getHeartBeatPackageCount()
+	public final int getAdjustTimeCount()
 	{
-		return heartBeatPackageCount;
+		return adjustTimeCount;
 	}
 
-//	public final void setHeartBeatPackageCount(int heartBeatPackageCount)
-//	{
-//		this.heartBeatPackageCount = heartBeatPackageCount;
-//	}
-
-	public final void incrementHeartBeatPackageCount()
+	public final void incrementAdjustTimeCount()
 	{
-		this.heartBeatPackageCount++;
+		this.adjustTimeCount++;
 	}
 
-	//	public List<Channel> getChannelList()
-	//	{
-	//		return channelList;
-	//	}
+	public final int getAdjustTimeResponseCount()
+	{
+		return adjustTimeResponseCount;
+	}
+
+	public final void incrementAdjustTimeResponseCount()
+	{
+		this.adjustTimeResponseCount++;
+	}
+
+	public final int getHeartBeatCount()
+	{
+		return heartBeatCount;
+	}
+
+	public final void incrementHeartBeatCount()
+	{
+		this.heartBeatCount++;
+	}
+	
+	public final int getInReadyCount()
+	{
+		return inReadyCount;
+	}
+
+	public final void incrementInReadyCount()
+	{
+		this.inReadyCount++;
+	}
+	
+
+	/**
+	 * 根据不同的命令，统计不同的数据包
+	 */
+	public final void setPackageCount(String command)
+	{
+		switch (command)
+		{
+		case "3": // 校时请求
+			this.adjustTimeCount++;
+			break;
+		case "83":// 校时应答
+			this.adjustTimeResponseCount++;
+			break;
+		case "32": // 注册请求
+			this.loginCount++;
+			break;
+		case "-96":// 注册应答
+			this.loginResponseCount++;
+			break;
+		case "64": // 准备就绪
+			this.inReadyCount++;
+			break;
+		case "65": // 定时定距
+			this.timingCount++;
+			break;
+		case "66": // 关键数据：到站、离站信息
+		case "67": // 关键数据：到离始发站、终点站信息
+		case "68": // 关键数据：进出停场信息
+		case "69": // 关键数据：终端异常报警信息
+		case "70": // 关键数据：请求及报告信息发送
+		case "72": // 关键数据：IC卡操作信息
+			this.abnormalCount++;
+			break;
+		case "-63": // 关键数据应答
+			this.abnormalResponseCount++;
+			break;
+		case "1": //接收到的心跳
+			this.heartBeatCount++;
+			break;
+		}
+
+	}
+
+	// public List<Channel> getChannelList()
+	// {
+	// return channelList;
+	// }
 	//
-	//	public void setChannelList(Channel channel)
-	//	{
-	//		this.channelList.add(channel);
-	//	}
+	// public void setChannelList(Channel channel)
+	// {
+	// this.channelList.add(channel);
+	// }
 	//
-	//	/**
-	//	 * 计算当前活跃的连接数
-	//	 */
-	//	public final int getCurrentChannelActiveCount()
-	//	{
-	//		int cnt = 0;
-	//		//		for (Channel c : channelList)
-	//		//		{
-	//		//			if (c != null && c.isActive())
-	//		//				cnt++;
-	//		//		}
-	//		for (Channel c : channelSet)
-	//		{
-	//			if (c != null && c.isActive())
-	//				cnt++;
-	//		}
-	//		return cnt;
-	//	}
+	// /**
+	// * 计算当前活跃的连接数
+	// */
+	// public final int getCurrentChannelActiveCount()
+	// {
+	// int cnt = 0;
+	// // for (Channel c : channelList)
+	// // {
+	// // if (c != null && c.isActive())
+	// // cnt++;
+	// // }
+	// for (Channel c : channelSet)
+	// {
+	// if (c != null && c.isActive())
+	// cnt++;
+	// }
+	// return cnt;
+	// }
 
-	@Override
-	public String toString()
-	{
-		if (channel.isActive())
-			return "子线程信息： [线程ID=" + threadID + ", 连接状态=在线" + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString
-					+ ", 运行时长=" + runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数="
-					+ disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount
-					+ ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数=" + loginPackageSendCount
-					+ ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数="
-					+ abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
-					+ heartBeatPackageCount + "]";
-		else
-			return "子线程信息： [线程ID=" + threadID + ", 连接状态=失效" + ", 开始时间=" + startTimeString + ", 失效时间=" + endTimeString
-					+ ", 运行时长=" + runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数="
-					+ disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数=" + disconnectionOfHeartBeatCount
-					+ ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数=" + loginPackageSendCount
-					+ ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount + ", 发送异常包个数="
-					+ abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
-					+ heartBeatPackageCount + "]";
-	}
+//	@Override
+//	public String toString()
+//	{
+//		if (channel.isActive())
+//			return "子线程信息： [线程ID=" + threadID + ", 连接状态=在线" + ", 开始时间=" + startTimeString + ", 记录截止时间=" + endTimeString + ", 运行时长="
+//					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
+//					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
+//					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
+//					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+//					+ heartBeatPackageCount + "]";
+//		else
+//			return "子线程信息： [线程ID=" + threadID + ", 连接状态=失效" + ", 开始时间=" + startTimeString + ", 失效时间=" + endTimeString + ", 运行时长="
+//					+ runDuration + ", 断开次数=" + disconnectionCount + ", 模拟断开次数=" + disconnectInRandomTimeCount + ", 因为没及时收到心跳而断开次数="
+//					+ disconnectionOfHeartBeatCount + ", 因为没及时收到异常应答而断开次数=" + disconnectionOfAbnormalCount + ", 发送注册包个数="
+//					+ loginPackageSendCount + ", 接收到注册应答包个数=" + loginPackageReceivedCount + ", 发送定时定距包个数=" + timingPackageCount
+//					+ ", 发送异常包个数=" + abnormalPackageCount + ", 接收到的异常应答包个数=" + abnormalResponsePackageCount + ", 接收到心跳包个数="
+//					+ heartBeatPackageCount + "]";
+//	}
 }

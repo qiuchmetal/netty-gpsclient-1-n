@@ -11,6 +11,10 @@ import com.test.nettytest.client.util.NettyClientUtil;
 public class GPSDataLineFromAFile
 {
 	/**
+	 * 车号
+	 */
+	private String busId;
+	/**
 	 * 接收包的时间
 	 */
 	private long receiveTimestamp;
@@ -19,7 +23,7 @@ public class GPSDataLineFromAFile
 	 */
 	private long gpsOriginalTimestamp;
 	/**
-	 * 改写后的 GPS 时间
+	 * 改写后的 GPS 时间，用于改写下一个包的 GPS 时间
 	 */
 	private long gpsCurrentTimestamp;
 	/**
@@ -30,6 +34,16 @@ public class GPSDataLineFromAFile
 	 * GPS原字串
 	 */
 	private String gpsData;
+
+	public final String getBusId()
+	{
+		return busId;
+	}
+
+	public final void setBusId(String busId)
+	{
+		this.busId = busId;
+	}
 
 	public final long getReceiveTimestamp()
 	{
@@ -112,7 +126,7 @@ public class GPSDataLineFromAFile
 			e.printStackTrace();
 		}
 		
-		System.out.println(newGpsData);
+//		System.out.println(newGpsData);
 
 		return newGpsData;
 	}
@@ -120,8 +134,20 @@ public class GPSDataLineFromAFile
 	/**
 	 * 使用具体的时间戳来改写 GPS 原始数据包
 	 */
-	public byte[] getGpsDataBytesByCurrentTime(long timestamp)
+//	public byte[] getGpsDataBytesByCurrentTime(long timestamp)
+//	{
+//		return NettyClientUtil.hexStringToByteArray(handleGpsData(timestamp));
+//	}
+	public String getGpsDataByCurrentTime(long timestamp)
 	{
-		return NettyClientUtil.hexStringToByteArray(handleGpsData(timestamp));
+		return handleGpsData(timestamp);
+	}
+	
+	/**
+	 * 改写 GPS 原始包里的 GPS 时间
+	 */
+	public void updateGpsDataByTimestamp(long timestamp)
+	{
+		this.gpsData = handleGpsData(timestamp);
 	}
 }

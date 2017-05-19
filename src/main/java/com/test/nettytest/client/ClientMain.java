@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -20,32 +19,35 @@ import com.test.nettytest.client.task.CreateThreadInfoFileTask;
 
 public class ClientMain
 {
+	private static int busCount = 0; // 车号数
+	private static int packageCount = 0; // 要发送的包数
+
 	public static void main(String[] args)
 	{
 		System.out.println("开始加载车号文件。");
 		ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque = new ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>>();
-		int busCount = loadBusInfo(busDeque);
-		System.out.println("成功加载了 " + busCount + " 个车号文件。");
+//		ConcurrentHashMap<UUID, Queue<GPSDataLineFromAFile>> busMap = new ConcurrentHashMap<UUID, Queue<GPSDataLineFromAFile>>();
+		loadBusInfo(busDeque);
+		System.out.println("成功加载了 " + busCount + " 个车号文件，一共有 " + packageCount + " 个数据包。");
 
-		while (!busDeque.isEmpty())
-		{
-			Queue<GPSDataLineFromAFile> gpsDataqQueue = busDeque.poll();
-			while (!gpsDataqQueue.isEmpty())
-			{
-				GPSDataLineFromAFile gpsDataLine = gpsDataqQueue.poll();
-//				GpsDataHandler.handleGpsData(gpsDataLine);
-			}
-		}
-
-		try
-		{
-			TimeUnit.HOURS.sleep(1);
-		}
-		catch (InterruptedException e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		while (!busDeque.isEmpty())
+//		{
+//			Queue<GPSDataLineFromAFile> gpsDataqQueue = busDeque.poll();
+//			while (!gpsDataqQueue.isEmpty())
+//			{
+//				GPSDataLineFromAFile gpsDataLine = gpsDataqQueue.poll();
+////				GpsDataHandler.handleGpsData(gpsDataLine);
+//			}
+//		}
+//
+//		try
+//		{
+//			TimeUnit.HOURS.sleep(1);
+//		}
+//		catch (InterruptedException e)
+//		{
+//			e.printStackTrace();
+//		}
 
 		// 连接线程，只有一个对象
 		ConnectionThreadInfo connectionThreadInfo = new ConnectionThreadInfo();
@@ -96,7 +98,7 @@ public class ClientMain
 				+ System.getProperty("file.separator") + "buslib";
 //		System.out.println(filePath);
 
-		int busCount = 0;
+//		int busCount = 0;
 		File fileDir = new File(filePath);
 //		String encoding="UTF-8";
 //		SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss");
@@ -112,12 +114,12 @@ public class ClientMain
 //					String suffix = fileName.substring(fileName.lastIndexOf("."));
 				// 车号名称
 //					String busName = fileName.substring(0, fileName.length() - suffix.length());
-				
+
 				// 车号名称（没有后缀名）
-				String busName = f.getName();
+				String busId = f.getName();
 				busCount++;
 				// 把每行内容加入队列里，因为一条线程只加载一个队列对象，不会产生线程安全问题
-				Queue<GPSDataLineFromAFile> gpsDataqQueue = new LinkedList<GPSDataLineFromAFile>();
+				Queue<GPSDataLineFromAFile> gpsDataQueue = new LinkedList<GPSDataLineFromAFile>();
 				try
 				{
 					// 读取车号文件内容
@@ -125,16 +127,18 @@ public class ClientMain
 					InputStreamReader reader = new InputStreamReader(new FileInputStream(f)); // 使用默认字符集
 					BufferedReader bufferedReader = new BufferedReader(reader);
 					String lineTxt = null;
-					boolean isTheFirst = true; //是否是第一条记录
+					boolean isTheFirst = true; // 是否是第一条记录
 					while ((lineTxt = bufferedReader.readLine()) != null)
 					{
 //							System.out.println(lineTxt);
 						String[] strings = lineTxt.split(",");
 						// 在读取第一条数据时，判断是否是注册指令，假如不是，则先编造一条注册指令，加入队列，然后再加文件内容
-						if (isTheFirst && strings[3] != "32")
+						if (isTheFirst && !"32".equals(strings[3]))
 						{
 							long currentTimestamp = System.currentTimeMillis();
 							GPSDataLineFromAFile gpsDataLine = new GPSDataLineFromAFile();
+							// 车号
+							gpsDataLine.setBusId(busId);
 							// 接收时间
 //							gpsDataLine.setReceiveTime(currentTimestamp);
 							// gps时间
@@ -142,12 +146,13 @@ public class ClientMain
 							// 命令字
 							gpsDataLine.setCommand("32");
 							// gps数据串
-							gpsDataLine.setGpsData(NettyClientCommand.getLoginHexString(busName, currentTimestamp));
-							gpsDataqQueue.add(gpsDataLine);
-							isTheFirst = false;
+							gpsDataLine.setGpsData(NettyClientCommand.getLoginHexString(busId, currentTimestamp));
+							gpsDataQueue.add(gpsDataLine);
 						}
 
 						GPSDataLineFromAFile gpsDataLine = new GPSDataLineFromAFile();
+						// 车号
+						gpsDataLine.setBusId(busId);
 						// 接收时间
 						gpsDataLine.setReceiveTimestamp(Long.parseLong(strings[1]));
 						// gps 原始时间
@@ -156,9 +161,13 @@ public class ClientMain
 						gpsDataLine.setCommand(strings[3]);
 						// gps数据串
 						gpsDataLine.setGpsData(strings[4]);
-						gpsDataqQueue.add(gpsDataLine);
+						gpsDataQueue.add(gpsDataLine);
+
+						packageCount++;
+
+						isTheFirst = false;
 					}
-					busDeque.add(gpsDataqQueue);
+					busDeque.add(gpsDataQueue);
 					reader.close();
 				}
 				catch (Exception e)
