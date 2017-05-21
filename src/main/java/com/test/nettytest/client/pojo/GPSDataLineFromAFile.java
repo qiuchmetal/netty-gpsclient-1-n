@@ -150,4 +150,14 @@ public class GPSDataLineFromAFile
 	{
 		this.gpsData = handleGpsData(timestamp);
 	}
+
+	@Override
+	public String toString()
+	{
+		return "GPSDataLineFromAFile [busId=" + busId + ", receiveTimestamp=" + receiveTimestamp + ", gpsOriginalTimestamp="
+				+ gpsOriginalTimestamp + ", gpsCurrentTimestamp=" + gpsCurrentTimestamp + ", command=" + command + ", gpsData=" + gpsData
+				+ "]";
+	}
+	
+	
 }

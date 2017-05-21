@@ -1,12 +1,15 @@
 package com.test.nettytest.client;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.Date;
-import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.test.nettytest.client.channelhandler.RealDataHandler;
@@ -39,7 +42,7 @@ public class NettyClientConnetion
 	/**
 	 * 从目录下加载到的车号队列
 	 */
-	public ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque;
+//	public ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque;
 	/**
 	 * 一共多少辆车，每辆车一个连接
 	 */
@@ -47,11 +50,23 @@ public class NettyClientConnetion
 	/**
 	 * 使用 busId 与 将要发送的车号队列组成 map，在模拟断开重连时需要用上
 	 */
-	public ConcurrentHashMap<String, Queue<GPSDataLineFromAFile>> busMap;
+	public ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>> busMap;
+	/**
+	 * 记录每个车号发送了多少指令
+	 */
+	public ConcurrentHashMap<String, Integer> busSendCountMap = new ConcurrentHashMap<String, Integer>();	
 	/**
 	 * 当前连接线程组，在子线程模拟断开重连时，需要用它来启用调度
 	 */
 	public EventLoopGroup group = new NioEventLoopGroup();
+	/**
+	 * 已连接的车号集合，用于检查数据包是否已经发完
+	 */
+	public Set<String> busSet = new ConcurrentSkipListSet<String>();
+
+	private volatile ScheduledFuture<?> checkBusSetTask; // 检查车号集合是否为空
+
+	private long startTimestamp; // 开始运行
 
 	private static SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 
@@ -60,29 +75,30 @@ public class NettyClientConnetion
 //	private final int CONNECTION_COUNT = NettyClientUtil.CONNETION_COUNT; //需要保持的连接数
 
 	// 执行 IO 之外的业务线程
-	public ScheduledExecutorService taskService;
+//	public ScheduledExecutorService taskService;
 
-	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
+//	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
+//	{
+//		this.connectionThreadInfo = connectionThreadInfo;
+//		this.channelThreadInfodDeque = channelThreadInfodDeque;
+//
+//		// 连接线程开始时间
+//		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
+//
+//		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：["
+//				+ NettyClientUtil.CONNETION_COUNT + "]");
+//
+//		taskService = Executors.newScheduledThreadPool(NettyClientUtil.THREAD_POOL_SIZE + 1);
+//	}
+
+	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo
+			, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque
+			, ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>> busMap, int busCount)
 	{
 		this.connectionThreadInfo = connectionThreadInfo;
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
-
-		// 连接线程开始时间
-		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
-
-		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
-		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：["
-				+ NettyClientUtil.CONNETION_COUNT + "]");
-
-		taskService = Executors.newScheduledThreadPool(NettyClientUtil.THREAD_POOL_SIZE);
-	}
-
-	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque,
-			ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque, int busCount)
-	{
-		this.connectionThreadInfo = connectionThreadInfo;
-		this.channelThreadInfodDeque = channelThreadInfodDeque;
-		this.busDeque = busDeque;
+		this.busMap = busMap;
 		this.busCount = busCount;
 
 		// 连接线程开始时间
@@ -91,7 +107,7 @@ public class NettyClientConnetion
 		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
 
-		taskService = Executors.newScheduledThreadPool(busCount > 10 ? busCount / 10 : 1);
+//		taskService = Executors.newScheduledThreadPool(busCount > 5 ? busCount / 5 : 1);
 	}
 
 	public void start()
@@ -109,21 +125,24 @@ public class NettyClientConnetion
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
 //				ch.pipeline().addLast(new LoginHandler(channelThreadInfodDeque, NettyClientConnetion.this));
-				ch.pipeline().addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, null));
+//				ch.pipeline().addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, null));
 			}
 		});
 
 		// //记录线程开始时间
 		// threadInfo.setStartTime(System.currentTimeMillis());
+		// 开始时间
+		startTimestamp = System.currentTimeMillis();
 
 		// for (int i = 0; i < CONNECTION_COUNT; i++)
 		// doConnect();
 
 		// 使用调度线程进行连接，每个车号一个连接
-		for (int i = 0; i < busCount; i++)
-//			group.schedule(() -> doConnect(null), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
-//					TimeUnit.SECONDS);
-			group.schedule(() -> doConnect(null), 0, TimeUnit.SECONDS);
+//		for (int i = 0; i < busCount; i++)
+		for(String busId:busMap.keySet())
+			group.schedule(() -> doConnect(busId, false), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
+					TimeUnit.SECONDS);
+//			group.schedule(() -> doConnect(busId, false), 0, TimeUnit.SECONDS);
 
 //		for(Map.Entry<UUID, Queue<GPSDataLineFromAFile>> e:busMap.entrySet())
 //		{
@@ -167,7 +186,7 @@ public class NettyClientConnetion
 		// }
 	}
 
-	public void doConnect(String busId)
+	public void doConnect(String busId, boolean isDisconnectByManual)
 	{
 		String host = NettyClientUtil.SERVER_IP;
 		int port = NettyClientUtil.SERVER_PORT;
@@ -192,12 +211,29 @@ public class NettyClientConnetion
 					// 成功连接次数
 					connectionThreadInfo.setAndGetConnectionCount();
 
-					// 有 UUID 则证明是模拟断开重连的，在重连后，需要指定线程使用哪个车号
+					// 根据 busId 的不同，动态增加 ChannelHandler
 					if (busId != null && !busId.isEmpty())
 					{
-						futureListener.channel().pipeline().removeLast();
+//						futureListener.channel().pipeline().removeLast();
 						futureListener.channel().pipeline()
-								.addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, busId));
+							.addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, busId, isDisconnectByManual));
+					}
+
+					// 有一个车号连接上后，就开启检查车号集合任务，每分钟检查一次
+					if (checkBusSetTask == null)
+					{
+//						checkBusSetTask = taskService.scheduleAtFixedRate(() ->
+						checkBusSetTask = group.scheduleAtFixedRate(() ->
+						{
+							if (busSet.isEmpty())
+							{
+								checkBusSetTask.cancel(true);
+								group.shutdownGracefully();
+								System.out.println("所有的数据包已发送完毕！运行时长：" + (startTimestamp > 0
+										? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTimestamp) : "未知"));
+//								ClientMain.countDownLatch.countDown();
+							}
+						} , 1, 1, TimeUnit.MINUTES);
 					}
 
 //					channel = futureListener.channel();
@@ -222,7 +258,7 @@ public class NettyClientConnetion
 						@Override
 						public void run()
 						{
-							doConnect(busId);
+							doConnect(busId, isDisconnectByManual);
 						}
 					}, 10, TimeUnit.SECONDS);
 				}

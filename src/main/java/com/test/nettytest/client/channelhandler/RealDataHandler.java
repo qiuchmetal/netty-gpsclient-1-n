@@ -1,12 +1,12 @@
 package com.test.nettytest.client.channelhandler;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -29,18 +29,8 @@ import io.netty.util.ReferenceCountUtil;
 public class RealDataHandler extends ChannelInboundHandlerAdapter
 {
 	private volatile ScheduledFuture<?> logInTask; // 注册任务
-	private volatile ScheduledFuture<?> disconnectWithoutHeartBeatTask; // 没有收到心跳的断开任务
-	private volatile ScheduledFuture<?> disconnectInRandomTimeTask; // 模拟设备的不稳定情况
-	private volatile ScheduledFuture<?> timingAndFixedDistanceTask; // 定时定距任务
-	private volatile ScheduledFuture<?> abnormalTask; // 异常任务
+	private volatile ScheduledFuture<?> sendGpsDataTask; // 发送 GPS 数据任务
 
-//	private volatile ScheduledFuture<?> sendGpsDataTask; // 发送 GPS 数据任务
-	/**
-	 * 负责发送 GPS 数据任务的列表
-	 */
-	private List<ScheduledFuture<?>> sendGpsDataTaskList = new ArrayList<ScheduledFuture<?>>();
-
-	private volatile ScheduledFuture<?> threadInfoOutputTask; // 记录线程的一些信息任务
 	/**
 	 * 管道线程集合
 	 */
@@ -62,10 +52,6 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	 */
 	private boolean isLogin = false;
 	/**
-	 * 记录因为没有及时收到异常应答而断开的信息
-	 */
-	private String abnormalMsg;
-	/**
 	 * 当前 channel 激活时间
 	 */
 	private long startTime = 0;
@@ -74,17 +60,13 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	 */
 	private long endTime;
 	/**
-	 * 发起异常了之后，就要把这段时间内接收到的数据包记录下来
-	 */
-	private boolean isAbnomalTime = false;
-	/**
 	 * 专门用来记录异常信息包的列表
 	 */
 	private List<String> abnomalPackageList = new ArrayList<String>();
 	/**
 	 * 当前管道加载的车号信息
 	 */
-	private Queue<GPSDataLineFromAFile> gpsDataQueue;
+	private ArrayDeque<GPSDataLineFromAFile> gpsDataQueue;
 	/**
 	 * 保留当前最近的一个已发送的 GPS 数据包
 	 */
@@ -96,28 +78,24 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	/**
 	 * 是否是模拟断开
 	 */
-	private boolean isDisconnectByManual = false;
+	private boolean isDisconnectByManual;
 
-	public RealDataHandler(ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque, NettyClientConnetion client)
+	private String diconnectionMessage;
+
+//	public RealDataHandler(ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque, NettyClientConnetion client)
+//	{
+//		this.channelThreadInfodDeque = channelThreadInfodDeque;
+//		this.client = client;
+//	}
+
+	public RealDataHandler(ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque, NettyClientConnetion client, String busId,
+			boolean isDisconnectByManual)
 	{
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
 		this.client = client;
-	}
-
-	public RealDataHandler(ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque, NettyClientConnetion client, String busId)
-	{
-		this.channelThreadInfodDeque = channelThreadInfodDeque;
-		this.client = client;
-		if (busId == null || busId.isEmpty())
-		{
-			this.gpsDataQueue = client.busDeque.poll();
-		}
-		else
-		{
-			this.gpsDataQueue = client.busMap.get(busId);
-			// 手动断开连接标识，当前的这个连接时之前手动断开后再进行连接的
-			this.isDisconnectByManual = true;
-		}
+		this.busId = busId;
+		this.gpsDataQueue = client.busMap.get(busId);
+		this.isDisconnectByManual = isDisconnectByManual;
 	}
 
 	private SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
@@ -128,236 +106,52 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	private class LogInTask implements Runnable
 	{
 		private final ChannelHandlerContext ctx;
-		private GPSDataLineFromAFile gpsDataLine; // 要发送的注册指令
+//		private GPSDataLineFromAFile gpsDataLine; // 要发送的注册指令
 
-		public LogInTask(final ChannelHandlerContext ctx, GPSDataLineFromAFile gpsDataLine)
+//		public LogInTask(final ChannelHandlerContext ctx, GPSDataLineFromAFile gpsDataLine)
+//		{
+//			this.ctx = ctx;
+//			this.gpsDataLine = gpsDataLine;
+//		}
+		public LogInTask(final ChannelHandlerContext ctx)
 		{
 			this.ctx = ctx;
-			this.gpsDataLine = gpsDataLine;
 		}
 
 		@Override
 		public void run()
 		{
+			GPSDataLineFromAFile gpsDataLine = null;
 			try
 			{
-//				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getLoginBytes()));
-
 				// FIXME
-
+				gpsDataLine = gpsDataQueue.peekFirst();
 				// 发送的注册包是指令包里的第一条指令，需要使用当前时间来初始化注册包里的 GPS 时间
 				if (!isDisconnectByManual)
 					gpsDataLine.updateGpsDataByTimestamp(System.currentTimeMillis());
 
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(gpsDataLine.getGpsData())));
 //				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息：[" + gpsDataLine.getGpsData() + "]");
+				gpsDataQueue.pollFirst();
 				// 保存已发送的包
 				lastSendGpsDataLine = gpsDataLine;
 //				System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
 
 				// 发送的注册包个数
-				channelThreadInfo.setPackageCount("32");
-			}
-			catch (Exception e)
-			{
-				System.out.println("[" + df.format(new Date()) + "] 发送注册信息失败。");
-				e.printStackTrace();
-			}
-		}
-	}
+				channelThreadInfo.setPackageCount(gpsDataLine.getCommand());
 
-	/**
-	 * 没有收到心跳的断开任务
-	 */
-	private class DisconnectWithoutHeartBeatTask implements Runnable
-	{
-		private final ChannelHandlerContext ctx;
-
-		public DisconnectWithoutHeartBeatTask(final ChannelHandlerContext ctx)
-		{
-			this.ctx = ctx;
-			// System.out.println("[" + Thread.currentThread().getName() + "] ["
-			// + df.format(new Date()) + "] 创建了心跳检测。");
-		}
-
-		@Override
-		public void run()
-		{
-			ctx.disconnect();
-			// 因为没有接收到心跳而断开次数
-			channelThreadInfo.setDisconnectionOfHeartBeatCount(channelThreadInfo.getDisconnectionOfHeartBeatCount() + 1);
-			System.out.println(
-					"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + busId + "] 因为没有及时收到心跳而断开连接！！运行时长："
-							+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
-		}
-	}
-
-	/**
-	 * 模拟设备的不稳定情况
-	 */
-	private class DisconnectInRandomTimeTask implements Runnable
-	{
-		private final ChannelHandlerContext ctx;
-
-		public DisconnectInRandomTimeTask(final ChannelHandlerContext ctx)
-		{
-			this.ctx = ctx;
-		}
-
-		@Override
-		public void run()
-		{
-			ctx.disconnect();
-			channelThreadInfo.incrementDisconnectInRandomTimeCount();
-			System.out.println(
-					"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + busId + "] 模拟设备不稳定而断开连接！！运行时长："
-							+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知"));
-
-			// 取消之前的任务
-			if (disconnectInRandomTimeTask != null)
-			{
-				disconnectInRandomTimeTask.cancel(true);
-				disconnectInRandomTimeTask = null;
-			}
-			// 开启一个新任务
-			// disconnectInRandomTimeTask =
-			// ctx.executor().scheduleWithFixedDelay(new
-			// DisconnectInRandomTimeTask(ctx),
-			// (long) (NettyClientUtil.DISCONNECT_RANGE * 60 * (Math.random() *
-			// 0.9 + 0.1)), NettyClientUtil.DISCONNECT_RANGE,
-			// TimeUnit.SECONDS);
-			disconnectInRandomTimeTask = client.taskService.schedule(new DisconnectInRandomTimeTask(ctx),
-					(long) (NettyClientUtil.DISCONNECT_RANGE * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
-		}
-	}
-
-	/**
-	 * 发送定时定距信息
-	 */
-	private class TimingAndFixedDistanceTask implements Runnable
-	{
-		private final ChannelHandlerContext ctx;
-
-		public TimingAndFixedDistanceTask(final ChannelHandlerContext ctx)
-		{
-			this.ctx = ctx;
-		}
-
-		@Override
-		public void run()
-		{
-			try
-			{
-				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getTimingAndFixedDistanceBytes()));
-
-				channelThreadInfo.setPackageCount("65");
-
-				if (NettyClientUtil.TIMING_INTERVAL_FIXED != 1) // 发包时间不固定
-				{
-//					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date())
-//							+ "] 不固定时间间隔发送定时定距信息！-->>");
-
-					// 取消之前的任务
-					if (timingAndFixedDistanceTask != null)
-					{
-						timingAndFixedDistanceTask.cancel(true);
-						timingAndFixedDistanceTask = null;
-					}
-					// 开启一个新任务
-					// timingAndFixedDistanceTask =
-					// ctx.executor().scheduleWithFixedDelay(new
-					// TimingAndFixedDistanceTask(ctx),
-					// (long) (NettyClientUtil.TIMING_INTERVAL * (Math.random()
-					// * 0.9 + 0.1)), NettyClientUtil.TIMING_INTERVAL,
-					// TimeUnit.SECONDS);
-					timingAndFixedDistanceTask = client.taskService.schedule(new TimingAndFixedDistanceTask(ctx),
-							(long) (NettyClientUtil.TIMING_INTERVAL * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
-				}
+				// 记录此车号发送指令的数量
+				if (client.busSendCountMap.containsKey(busId))
+					client.busSendCountMap.put(busId, client.busSendCountMap.get(busId) + 1);
 				else
-				{
-//					System.out.println(
-//							"[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送定时定距信息！-->>");
-				}
-
+					client.busSendCountMap.put(busId, 1);
 			}
 			catch (Exception e)
 			{
-				System.out.println("[" + df.format(new Date()) + "] 发送定时定距信息失败。");
+				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息失败。" + gpsDataLine.toString());
 				e.printStackTrace();
 			}
 		}
-	}
-
-	/**
-	 * 发送异常信息
-	 */
-	private class AbnormalTask implements Runnable
-	{
-		private int count;
-		private final ChannelHandlerContext ctx;
-
-		private final long initialDelay; // 主要用于记录
-		private final long delay; // 主要用于记录
-		private final Date date = new Date();
-
-		public AbnormalTask(final ChannelHandlerContext ctx, long initialDelay, long delay)
-		{
-			this.count = 1;
-			this.ctx = ctx;
-			this.initialDelay = initialDelay;
-			this.delay = delay;
-		}
-
-		@Override
-		public void run()
-		{
-			try
-			{
-				if (count == 1)
-				{
-					isAbnomalTime = true;
-					abnomalPackageList.clear();
-				}
-
-				if (count > 3)
-				{
-					channelThreadInfo.setDisconnectionOfAbnormalCount(channelThreadInfo.getDisconnectionOfAbnormalCount() + 1);
-
-					abnormalMsg = "异常开启时间: [" + df.format(date.getTime() + (long) (initialDelay * 1000)) + "] 超时时间： ["
-							+ df.format(date.getTime() + (long) ((initialDelay + delay * 3) * 1000)) + "]";
-					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + busId + "] "
-							+ abnormalMsg + " ！！因为没有及时收到异常应答而断开连接！！运行时长："
-							+ (startTime > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTime) : "未知") + "。期间接收到的包："
-							+ abnomalPackageList.toString());
-					abnomalPackageList.clear();
-					isAbnomalTime = false;
-					ctx.disconnect();
-					return;
-				}
-
-				// 发送前，随机的 sleep 100ms 以内的一个时间
-				// try
-				// {
-				// TimeUnit.MILLISECONDS.sleep((long) (Math.random() * 100));
-				// }
-				// catch (InterruptedException e)
-				// {
-				// e.printStackTrace();
-				// }
-
-				ctx.writeAndFlush(Unpooled.copiedBuffer(clientCommand.getAbnormalBytes()));
-				// System.out.println("[" + Thread.currentThread().getName() +
-				// "] [" + df.format(new Date()) + "] 发送异常信息！-->> " + count);
-				count++;
-				channelThreadInfo.setPackageCount("69");
-			}
-			catch (Exception e)
-			{
-				System.out.println("[" + df.format(new Date()) + "] 发送异常信息失败。");
-				e.printStackTrace();
-			}
-		}
-
 	}
 
 	/**
@@ -366,22 +160,40 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	private class SendGpsDataTask implements Runnable
 	{
 		private final ChannelHandlerContext ctx;
-		private GPSDataLineFromAFile gpsDataLine;
 
-		public SendGpsDataTask(final ChannelHandlerContext ctx, GPSDataLineFromAFile gpsDataLine)
+		public SendGpsDataTask(final ChannelHandlerContext ctx)
 		{
 			this.ctx = ctx;
-			this.gpsDataLine = gpsDataLine;
 		}
 
 		@Override
 		public void run()
 		{
+			GPSDataLineFromAFile gpsDataLine = null;
 			try
 			{
-//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 现在发送 ：[" + gpsDataLine.getCommand() + "]["
-//						+ gpsDataLine.getGpsData() + "]");
+				// 确实要进行发送时，再拉取
+				/*
+				 * 现有逻辑：
+				 * 	Queue先读顶部元素，发送指令，然后弹出，再预读下一个顶部元素，不弹出，但会修改gps时间的数据
+				 * 换用buffer后的逻辑：
+				 *  0.  增加一个线程变量（ lastSendGPSDataLine ） 记录前一个已发送的数据对象实体
+				 * 	1.   buffer.readLine()	读取当前最新数据行
+				 *  2.  做时间处理逻辑，原来在发送完成的预读后，提前到这里
+				 *  2.5 	发送GPS数据
+				 *  3. buffer.mark()  标记预读起始位置
+				 *  4. buffer.readLine()  预读一行，进行原来的时间差计算等逻辑
+				 *  5. buffer.reset()  重置文件读取游标到预读前位置，等于回退了一行
+				 *  
+				 */
+				gpsDataLine = gpsDataQueue.peekFirst();
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(gpsDataLine.getGpsData())));
+//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 现在发送 ：[" + lastSendGpsDataLine.getCommand() + "]["
+//						+ lastSendGpsDataLine.getGpsData() + "]");
+				gpsDataQueue.pollFirst();
+//				if ("3".equals(gpsDataLine.getCommand()))
+//					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送了校时请求 ：[" + gpsDataLine.getGpsData() + "]");
+
 				// 保留当前已发送的包
 				lastSendGpsDataLine = gpsDataLine;
 				// System.out.println("[" + Thread.currentThread().getName() +
@@ -390,16 +202,26 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				// 发送包的个数
 				channelThreadInfo.setPackageCount(gpsDataLine.getCommand());
 
-				// FIXME
+				// 记录此车号发送指令的数量
+				if (client.busSendCountMap.containsKey(busId))
+					client.busSendCountMap.put(busId, client.busSendCountMap.get(busId) + 1);
+				else
+					client.busSendCountMap.put(busId, 1);
+
 				if (gpsDataQueue.isEmpty())
 				{
-					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，即将断开连接。");
-					ctx.disconnect();
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+					// 从已连接的车号集合里，把本车号移除
+					client.busSet.remove(busId);
+					// 假如发送的包不需要应答，则可以中断连接
+//					ctx.disconnect();
 					return;
 				}
 
-				// 准备发送下一个包
-				GPSDataLineFromAFile nextSendGpsDataLine = gpsDataQueue.poll();
+				// 预读下一个包
+//				GPSDataLineFromAFile nextSendGpsDataLine = gpsDataQueue.poll();
+				GPSDataLineFromAFile nextSendGpsDataLine = gpsDataQueue.peekFirst();
 
 				// 1、计算两包之间的 GPS 时间间隔
 				long gpsInterval = (nextSendGpsDataLine.getGpsOriginalTimestamp() - lastSendGpsDataLine.getGpsOriginalTimestamp());
@@ -409,35 +231,35 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				sendInterval = sendInterval < 0 ? 0 : sendInterval;
 				// 3、利用两包之间的 GPS 时间间隔，更新将要发包的 GPS 时间
 				nextSendGpsDataLine.updateGpsDataByTimestamp(lastSendGpsDataLine.getGpsCurrentTimestamp() + gpsInterval);
-
+				// FIXME
 				// 这个包不是注册包
 				if (!"32".equals(nextSendGpsDataLine.getCommand()))
 				{
-					sendGpsDataTaskList.add(
-							client.taskService.schedule(new SendGpsDataTask(ctx, nextSendGpsDataLine), sendInterval, TimeUnit.SECONDS));
+					sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
 				}
 				// 这个包是注册包
 				else
 				{
 					// 把要发的包，重新加载到队列里
-					Queue<GPSDataLineFromAFile> gpsDataNewQueue = new LinkedList<GPSDataLineFromAFile>();
-					gpsDataNewQueue.add(nextSendGpsDataLine); // 首先加入注册包
-					gpsDataNewQueue.addAll(gpsDataQueue); // 再把剩下的包，都往后加
-					if (client.busMap == null)
-						client.busMap = new ConcurrentHashMap<String, Queue<GPSDataLineFromAFile>>();
-					client.busMap.put(busId, gpsDataNewQueue);// 把这个车号的队列，增加到断开重连专用的
-																// map
-																// 里，等待重连后的提取
+//					Queue<GPSDataLineFromAFile> gpsDataNewQueue = new LinkedList<GPSDataLineFromAFile>();
+//					gpsDataNewQueue.add(nextSendGpsDataLine); // 首先加入注册包
+//					gpsDataNewQueue.addAll(gpsDataQueue); // 再把剩下的包，都往后加
+//					if (client.busMap == null)
+//						client.busMap = new ConcurrentHashMap<String, Queue<GPSDataLineFromAFile>>();
+//					client.busMap.put(busId, gpsDataNewQueue);// 把这个车号的队列，增加到断开重连专用的
+					// map里，等待重连后的提取
 //					client.busDeque.add(gpsDataNewQueue); // 把这个车号的队列，再重新增加到全车队列里，等待重连后的提取
-					gpsDataQueue.clear();// 这个队列已全部转移，进行清空
+//					gpsDataQueue.clear();// 这个队列已全部转移，进行清空
 
 					// 记录模拟断开次数
 					channelThreadInfo.incrementDisconnectInRandomTimeCount();
 
 					// 启用主线程的调度任务，通过 busId 告诉主线程，在重连后，需要提取哪个车号队列继续进行发送数据
-					client.group.schedule(() -> client.doConnect(busId), sendInterval, TimeUnit.SECONDS);
+					client.group.schedule(() -> client.doConnect(busId, true), sendInterval, TimeUnit.SECONDS);
+
 //					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 遇到了注册包，已启用调度重连。 ");
-					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 遇到了注册包，已启用调度重连。 ");
+//					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 遇到了注册包，已启用调度重连。 ");
+					diconnectionMessage = "遇到了注册包，已启用调度重连。 ";
 
 					// 需要断开重连
 					ctx.disconnect();
@@ -445,82 +267,132 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 			}
 			catch (Exception e)
 			{
-				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送 GPS 数据失败。");
+				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送 GPS 数据失败。" + gpsDataLine.toString());
 				e.printStackTrace();
 			}
 		}
 
 	}
 
-	/**
-	 * 记录线程的一些信息
-	 */
-	private class ThreadInfoOutputTask implements Runnable
-	{
-		@Override
-		public void run()
-		{
-			// 线程当前统计时间
-			channelThreadInfo.setEndTime(System.currentTimeMillis());
-			ChannelThreadInfoFile.writeToTxtFile(channelThreadInfo.toString());
-			// System.out.println("线程信息已写入文件。");
-		}
-	}
-
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception
 	{
 		// 断开前，先检查任务列表里的任务是否都已经结束
-		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 等待发送任务的完成。");
-		while (!sendGpsDataTaskList.isEmpty())
-		{
-			if (sendGpsDataTaskList.get(0).isDone())
-				sendGpsDataTaskList.remove(0);
-		}
-		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送任务已全部完成。");
+//		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 等待发送任务的完成。");
+//		while (!sendGpsDataTaskList.isEmpty())
+//		{
+//			if (sendGpsDataTaskList.get(0).isDone())
+//				sendGpsDataTaskList.remove(0);
+//		}
+//		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送任务已全部完成。");
 
 		long endTime = System.currentTimeMillis();
 //		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] [" + busId + "] 失去连接。运行时长："
 //				+ (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知"));
-		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 连接断开。运行时长："
-				+ (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知"));
+//		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 连接断开。[断开原因："
+//				+ ((diconnectionMessage == null || diconnectionMessage.isEmpty()) ? "不明" : diconnectionMessage) + "] [运行时长："
+//				+ (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知") + "]");
 
-		// 断开次数
-		channelThreadInfo.incrementDisconnectionCount();
-		// 断开时间
-		channelThreadInfo.setEndTime(endTime);
-
-		if (disconnectWithoutHeartBeatTask != null)
-		{
-			disconnectWithoutHeartBeatTask.cancel(true);
-			disconnectWithoutHeartBeatTask = null;
-		}
-		if (disconnectInRandomTimeTask != null)
-		{
-			disconnectInRandomTimeTask.cancel(true);
-			disconnectInRandomTimeTask = null;
-		}
 		if (logInTask != null)
 		{
 			logInTask.cancel(true);
 			logInTask = null;
 		}
-		if (timingAndFixedDistanceTask != null)
+
+		if (sendGpsDataTask != null)
 		{
-			timingAndFixedDistanceTask.cancel(true);
-			timingAndFixedDistanceTask = null;
-		}
-		if (abnormalTask != null)
-		{
-			abnormalTask.cancel(true);
-			abnormalTask = null;
+			sendGpsDataTask.cancel(true);
+			sendGpsDataTask = null;
 		}
 
 		// client.disconnectionCount++;
-
+		// FIXME
 		// 意外断开重连
-//		if (!client.busDeque.isEmpty())
-//			client.doConnect();
+		if (!isDisconnectByManual)
+		{
+			// 断开次数
+			channelThreadInfo.incrementDisconnectionCount();
+			// 断开时间
+			channelThreadInfo.setEndTime(endTime);
+
+			System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 不明原因的断开连接。 [运行时长："
+					+ (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知") + "]");
+
+			if (busId != null && !busId.isEmpty())
+			{
+				if (!gpsDataQueue.isEmpty())
+				{
+					GPSDataLineFromAFile nextSendGpsDataLine = gpsDataQueue.peekFirst();
+					// 下一个包不是注册包，就要编造一个注册包
+					if (!"32".equals(nextSendGpsDataLine.getCommand()))
+					{
+						long currentTimestamp = System.currentTimeMillis();
+						GPSDataLineFromAFile newGpsLoginLine = new GPSDataLineFromAFile();
+						// 车号
+						newGpsLoginLine.setBusId(busId);
+						// 接收时间
+//						gpsDataLine.setReceiveTime(currentTimestamp);
+						// gps时间
+//						gpsDataLine.setGpsTime(currentTimestamp);
+						// 命令字
+						newGpsLoginLine.setCommand("32");
+						// gps数据串
+						newGpsLoginLine.setGpsData(NettyClientCommand.getLoginHexString(busId, currentTimestamp));
+
+						// 把要发的包，加载到队列最前端
+						gpsDataQueue.addFirst(newGpsLoginLine);
+//						ArrayDeque<GPSDataLineFromAFile> gpsDataNewQueue = new ArrayDeque<GPSDataLineFromAFile>();
+//						gpsDataNewQueue.add(newGpsLoginLine); // 首先加入注册包
+//						gpsDataNewQueue.addAll(gpsDataQueue); // 再把剩下的包，都往后加
+//						client.busMap.put(busId, gpsDataNewQueue);// 把这个车号的队列，增加到断开重连专用的map里，等待重连后的提取
+//						gpsDataQueue.clear();// 当前这个队列已全部转移，进行清空
+
+						client.doConnect(busId, false);
+					}
+					// 假如是注册包，就当做是调度重连
+					else
+					{
+						// 一个包都没发，就断开了
+						if (lastSendGpsDataLine == null)
+						{
+							client.doConnect(busId, false);
+							return;
+						}
+
+						// 1、计算两包之间的 GPS 时间间隔
+						long gpsInterval = (nextSendGpsDataLine.getGpsOriginalTimestamp() - lastSendGpsDataLine.getGpsOriginalTimestamp());
+						gpsInterval = gpsInterval < 0 ? 0 : gpsInterval;
+						// 2、计算两包之间的发送间隔
+						long sendInterval = (nextSendGpsDataLine.getReceiveTimestamp() - lastSendGpsDataLine.getReceiveTimestamp()) / 1000;
+						sendInterval = sendInterval < 0 ? 0 : sendInterval;
+						// 3、利用两包之间的 GPS 时间间隔，更新将要发包的 GPS 时间
+						nextSendGpsDataLine.updateGpsDataByTimestamp(lastSendGpsDataLine.getGpsCurrentTimestamp() + gpsInterval);
+
+						// 把要发的包，重新加载到队列里
+//						Queue<GPSDataLineFromAFile> gpsDataNewQueue = new LinkedList<GPSDataLineFromAFile>();
+//						gpsDataNewQueue.add(nextSendGpsDataLine); // 首先加入注册包
+//						gpsDataNewQueue.addAll(gpsDataQueue); // 再把剩下的包，都往后加
+//						client.busMap.put(busId, gpsDataNewQueue);// 把这个车号的队列，增加到断开重连专用的map里，等待重连后的提取
+//						gpsDataQueue.clear();// 当前这个队列已全部转移，进行清空
+
+						// 启用主线程的调度任务，通过 busId 告诉主线程，在重连后，需要提取哪个车号队列继续进行发送数据
+						client.group.schedule(() -> client.doConnect(busId, true), sendInterval, TimeUnit.SECONDS);
+					}
+				}
+				else
+				{
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 但是所有的包已发完。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+					// 从已连接的车号集合里，把本车号移除
+					client.busSet.remove(busId);
+				}
+			}
+			else
+			{
+				System.out.println("[未知车号] [" + df.format(new Date()) + "] 不明原因的断开连接。 [运行时长："
+						+ (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知") + "]");
+			}
+		}
 	}
 
 	@Override
@@ -543,20 +415,22 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 		channelThreadInfo.setStartTime(startTime);
 
 		// 取出第一条指令，注册指令
-		GPSDataLineFromAFile gpsDataLine = gpsDataQueue.poll();
+//		this.gpsDataQueue = client.busMap.get(busId);
+//		GPSDataLineFromAFile gpsDataLine = gpsDataQueue.poll();
 		// 记录当前车号
-		busId = gpsDataLine.getBusId();
+//		busId = gpsDataLine.getBusId();
+		// 连接上后，往车号集合里添加本车号，主要用于后面判断此车号的指令是否已经发送完毕
+		client.busSet.add(busId);
 		// FIXME
 		// 第一次连接，调度任务的固定间隔可以自定义
 		if (!isDisconnectByManual)
 			// 立即注册
-			logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx, gpsDataLine), 0, NettyClientUtil.LOGIN_INTERVAL,
-					TimeUnit.SECONDS);
+			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL, TimeUnit.SECONDS);
+//			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx, gpsDataLine), 1, NettyClientUtil.LOGIN_INTERVAL,
+//					TimeUnit.SECONDS);
 		// 手动断开重连，调度任务的固定间隔要缩短
 		else
-			logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx, gpsDataLine), 0, 1, TimeUnit.SECONDS);
-		// 把任务监听加入列表
-		sendGpsDataTaskList.add(logInTask);
+			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, 2, TimeUnit.SECONDS);
 
 		// 在设定的一个时间段内的一个随机时间点进行注册
 		// logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx),
@@ -587,15 +461,12 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 		byte[] bytes = ByteBufUtil.getBytes((ByteBuf) msg);
 		ReferenceCountUtil.release(msg);
 
-		// 发送了异常包后，需要在超时前，记录所有接收到的包
-		if (isAbnomalTime)
-			abnomalPackageList.add(ByteBufUtil.hexDump(bytes));
-
 //				System.out.println(Thread.currentThread().getName() + "接收到的信息：");
 		// for (byte b : bytes)
 		// System.out.print(b + ",");
 
-//						System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 接收到的信息："+ByteBufUtil.hexDump(bytes));
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 接收到的信息："+ByteBufUtil.hexDump(bytes));
+//		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 接收到的信息：[" + ByteBufUtil.hexDump(bytes) + "]");
 
 		// 接收到了注册应答信息
 		if (bytes.length > 8 && bytes[7] == -96 && logInTask != null)
@@ -605,21 +476,25 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 			// 收到的注册应答包个数
 			channelThreadInfo.setPackageCount("-96");
 //			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 已注册成功。");
-			System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 已注册成功。");
+//			System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 已注册成功。");
 
 			// 一段时间后没有收到心跳，就断开连接
 //			disconnectWithoutHeartBeatTask = client.taskService.schedule(new DisconnectWithoutHeartBeatTask(ctx),
 //					NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
 
+			// 只有一个注册包的情况下发生
 			if (gpsDataQueue.isEmpty())
 			{
-				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，即将断开连接。");
-				ctx.disconnect();
+				System.out.println(
+						"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+				// 从已连接的车号集合里，把本车号移除
+				client.busSet.remove(busId);
+//				ctx.disconnect();
 				return;
 			}
 
-			// 收到注册应答后，取出第二条要发送的数据
-			GPSDataLineFromAFile gpsDataLine = gpsDataQueue.poll();
+			// 收到注册应答后，预读出第二条要发送的数据
+			GPSDataLineFromAFile gpsDataLine = gpsDataQueue.peek();
 
 			// FIXME
 
@@ -631,10 +506,10 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				interval = interval < 0 ? 0 : interval;
 				// 2、以当前时间更改第二条 GPS 数据
 				gpsDataLine.updateGpsDataByTimestamp(System.currentTimeMillis());
-				// 把任务监听加入列表
-				sendGpsDataTaskList.add(client.taskService.schedule(new SendGpsDataTask(ctx, gpsDataLine), interval, TimeUnit.SECONDS));
+
+				sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), interval, TimeUnit.SECONDS);
 			}
-			// 断开重连后，第二包的 GPS 时间要参照注册包的 GPS 时间进行计算
+			// 断开重连并注册成功后，第二包的 GPS 时间要参照注册包的 GPS 时间进行计算
 			else
 			{
 				// 1、计算两包之间的 GPS 时间间隔
@@ -643,11 +518,10 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				// 2、计算两包之间的发送间隔
 				long sendInterval = (gpsDataLine.getReceiveTimestamp() - lastSendGpsDataLine.getReceiveTimestamp()) / 1000;
 				sendInterval = sendInterval < 0 ? 0 : sendInterval;
-				// 3、以上一包的 GPS 时间，加上 GPS 时间间隔，作为将要发送的包的 GPS 时间，并在 sendInterval
-				// 时间间隔之后发送出去
+				// 3、以上一包的 GPS 时间，加上 GPS 时间间隔，作为将要发送的包的 GPS 时间，并在 sendInterval 时间间隔之后发送出去
 				gpsDataLine.updateGpsDataByTimestamp(lastSendGpsDataLine.getGpsCurrentTimestamp() + gpsInterval);
-				// 把任务监听加入列表
-				sendGpsDataTaskList.add(client.taskService.schedule(new SendGpsDataTask(ctx, gpsDataLine), sendInterval, TimeUnit.SECONDS));
+
+				sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
 			}
 
 //			//发送异常信息
@@ -681,10 +555,11 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 //			disconnectWithoutHeartBeatTask = client.taskService.schedule(new DisconnectWithoutHeartBeatTask(ctx),
 //					NettyClientUtil.HEARTBEAT_TIMEOUT, TimeUnit.SECONDS);
 		}
-		// 收到了异常应答
+		// 收到了关键数据应答
 		else if (isLogin && bytes.length > 8 && bytes[7] == -63)
 		{
-//			//System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] <<-- 收到了异常应答 <<--");
+//			System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] <<-- 收到了异常应答 <<--");
+//			System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 接收到关键数据应答");
 			channelThreadInfo.setPackageCount("-63");
 //			//把之前的异常任务取消掉
 //			if (abnormalTask != null)
@@ -701,9 +576,10 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 //					NettyClientUtil.ABNORMAL_INTERVAL, TimeUnit.SECONDS);
 		}
 		// 收到了校时应答
-		else if (isLogin && bytes.length > 8 && bytes[7] == 83)
+		else if (isLogin && bytes.length > 8 && bytes[7] == -125)
 		{
-			channelThreadInfo.setPackageCount("83");
+//			System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 接收到校时应答");
+			channelThreadInfo.setPackageCount("-125");
 		}
 	}
 

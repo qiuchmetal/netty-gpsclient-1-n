@@ -6,6 +6,8 @@ import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledFuture;
 
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.ConnectionThreadInfo;
@@ -24,12 +26,25 @@ public class CreateThreadInfoFileTask implements Runnable
 	 * 管道线程统计信息
 	 */
 	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
+	
+	private CountDownLatch countDownLatch;
+	private ScheduledFuture<?> createThreadInfoFileTask;
 
 	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo,
 			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
 	{
 		this.connectionThreadInfo = connectionThreadInfo;
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
+	}
+	
+	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo
+			,ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque
+			,CountDownLatch countDownLatch, ScheduledFuture<?> createThreadInfoFileTask)
+	{
+		this.connectionThreadInfo = connectionThreadInfo;
+		this.channelThreadInfodDeque = channelThreadInfodDeque;
+		this.countDownLatch = countDownLatch;
+		this.createThreadInfoFileTask = createThreadInfoFileTask;
 	}
 
 	/**
@@ -125,6 +140,12 @@ public class CreateThreadInfoFileTask implements Runnable
 				bufferedWriter.write(doThreadStatistics() + "\n\r\n\r\n\r\n\r");
 				bufferedWriter.close();
 			}
+			
+//			if(countDownLatch.getCount()==1 || createThreadInfoFileTask!=null)
+//			{
+//				createThreadInfoFileTask.cancel(true);
+//				countDownLatch.countDown();
+//			}
 		}
 		catch (Exception e)
 		{

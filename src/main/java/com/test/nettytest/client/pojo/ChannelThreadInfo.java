@@ -333,7 +333,7 @@ public class ChannelThreadInfo
 		case "3": // 校时请求
 			this.adjustTimeCount++;
 			break;
-		case "83":// 校时应答
+		case "-125":// 校时应答
 			this.adjustTimeResponseCount++;
 			break;
 		case "32": // 注册请求
