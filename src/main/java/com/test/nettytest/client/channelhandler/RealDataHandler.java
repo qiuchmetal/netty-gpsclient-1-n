@@ -223,7 +223,7 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				// 这个包不是注册包
 				if (!"32".equals(nextSendGpsDataLine.getCommand()))
 				{
-					sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
+					sendGpsDataTask = client.taskService.schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
 				}
 				// 这个包是注册包
 				else
@@ -413,12 +413,12 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 		// 第一次连接，调度任务的固定间隔可以自定义
 		if (!isDisconnectByManual)
 			// 立即注册
-			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL, TimeUnit.SECONDS);
+			logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL, TimeUnit.SECONDS);
 //			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx, gpsDataLine), 1, NettyClientUtil.LOGIN_INTERVAL,
 //					TimeUnit.SECONDS);
 		// 手动断开重连，调度任务的固定间隔要缩短
 		else
-			logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx), 0, 2, TimeUnit.SECONDS);
+			logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx), 0, 2, TimeUnit.SECONDS);
 
 		// 在设定的一个时间段内的一个随机时间点进行注册
 		// logInTask = ctx.executor().scheduleWithFixedDelay(new LogInTask(ctx),
@@ -495,7 +495,7 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				// 2、以当前时间更改第二条 GPS 数据
 				gpsDataLine.updateGpsDataByTimestamp(System.currentTimeMillis());
 
-				sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), interval, TimeUnit.SECONDS);
+				sendGpsDataTask = client.taskService.schedule(new SendGpsDataTask(ctx), interval, TimeUnit.SECONDS);
 			}
 			// 断开重连并注册成功后，第二包的 GPS 时间要参照注册包的 GPS 时间进行计算
 			else
@@ -509,7 +509,7 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 				// 3、以上一包的 GPS 时间，加上 GPS 时间间隔，作为将要发送的包的 GPS 时间，并在 sendInterval 时间间隔之后发送出去
 				gpsDataLine.updateGpsDataByTimestamp(lastSendGpsDataLine.getGpsCurrentTimestamp() + gpsInterval);
 
-				sendGpsDataTask = ctx.executor().schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
+				sendGpsDataTask = client.taskService.schedule(new SendGpsDataTask(ctx), sendInterval, TimeUnit.SECONDS);
 			}
 
 //			//发送异常信息

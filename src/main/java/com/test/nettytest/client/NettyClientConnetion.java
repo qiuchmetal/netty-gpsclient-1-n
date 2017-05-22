@@ -107,8 +107,8 @@ public class NettyClientConnetion
 		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
 		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
 
-//		taskService = Executors.newScheduledThreadPool(busCount > 5 ? busCount / 5 : 1);
-		taskService = Executors.newScheduledThreadPool(busCount);
+		taskService = Executors.newScheduledThreadPool(busCount > 2 ? busCount / 2 : 1);
+//		taskService = Executors.newScheduledThreadPool(busCount);
 	}
 
 	public void start()
