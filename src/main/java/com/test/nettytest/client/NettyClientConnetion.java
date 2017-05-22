@@ -75,7 +75,7 @@ public class NettyClientConnetion
 //	private final int CONNECTION_COUNT = NettyClientUtil.CONNETION_COUNT; //需要保持的连接数
 
 	// 执行 IO 之外的业务线程
-//	public ScheduledExecutorService taskService;
+	public ScheduledExecutorService taskService;
 
 //	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
 //	{
@@ -108,6 +108,7 @@ public class NettyClientConnetion
 		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
 
 //		taskService = Executors.newScheduledThreadPool(busCount > 5 ? busCount / 5 : 1);
+		taskService = Executors.newScheduledThreadPool(busCount);
 	}
 
 	public void start()

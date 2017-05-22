@@ -40,10 +40,6 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	 */
 	private ChannelThreadInfo channelThreadInfo;
 	/**
-	 * 指令生成类
-	 */
-	private NettyClientCommand clientCommand;
-	/**
 	 * 断开重连需要用到的
 	 */
 	private NettyClientConnetion client;
@@ -55,14 +51,6 @@ public class RealDataHandler extends ChannelInboundHandlerAdapter
 	 * 当前 channel 激活时间
 	 */
 	private long startTime = 0;
-	/**
-	 * 当前 channel 关闭时间
-	 */
-	private long endTime;
-	/**
-	 * 专门用来记录异常信息包的列表
-	 */
-	private List<String> abnomalPackageList = new ArrayList<String>();
 	/**
 	 * 当前管道加载的车号信息
 	 */
