@@ -70,10 +70,10 @@ public class GPSDataLineFromAFile
 		return gpsCurrentTimestamp;
 	}
 
-	public final void setGpsCurrentTimestamp(long gpsCurrentTimestamp)
-	{
-		this.gpsCurrentTimestamp = gpsCurrentTimestamp;
-	}
+//	public final void setGpsCurrentTimestamp(long gpsCurrentTimestamp)
+//	{
+//		this.gpsCurrentTimestamp = gpsCurrentTimestamp;
+//	}
 
 	public final String getGpsData()
 	{
@@ -93,6 +93,24 @@ public class GPSDataLineFromAFile
 	public final void setCommand(String command)
 	{
 		this.command = command;
+	}
+	
+	public GPSDataLineFromAFile()
+	{
+	}
+
+	public GPSDataLineFromAFile(String busId, String[] strings)
+	{
+		// 车号
+		this.busId = busId;
+		// 接收时间
+		this.receiveTimestamp = Long.parseLong(strings[1]);
+		// gps 原始时间
+		this.gpsOriginalTimestamp = Long.parseLong(strings[2]);
+		// 命令字
+		this.command = strings[3];
+		// gps数据串
+		this.gpsData = strings[4];
 	}
 
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss");
