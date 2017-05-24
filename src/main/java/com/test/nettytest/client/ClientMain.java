@@ -84,7 +84,11 @@ public class ClientMain
 //		for (int i = 0; i < NettyClientUtil.THREAD_POOL_SIZE; i++)
 //		(new NettyClientConnetion(threadInfoList)).start();
 
-		new NettyClientConnetion(connectionThreadInfo, channelThreadInfodDeque, busMap, busCount).start();
+//		new NettyClientConnetion(connectionThreadInfo, channelThreadInfodDeque, busMap, busCount).start();
+		
+		String filePath = (new File(ClientMain.class.getProtectionDomain().getCodeSource().getLocation().getFile())).getParent()
+				+ System.getProperty("file.separator") + "buslib";
+		new RealDataFromFileConnetion(connectionThreadInfo, channelThreadInfodDeque, filePath).start();
 
 //		try
 //		{
@@ -143,6 +147,7 @@ public class ClientMain
 
 				// 车号名称（没有后缀名）
 				String busId = f.getName();
+
 				busCount++;
 				// 把每行内容加入队列里，因为一条线程只加载一个队列对象，不会产生线程安全问题
 				ArrayDeque<GPSDataLineFromAFile> gpsDataQueue = new ArrayDeque<GPSDataLineFromAFile>();

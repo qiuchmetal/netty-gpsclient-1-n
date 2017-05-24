@@ -1,5 +1,6 @@
 package com.test.nettytest.client;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.Date;
@@ -12,7 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.test.nettytest.client.channelhandler.RealDataHandler;
+import com.test.nettytest.client.channelhandler.RealDataFromRAMHandler;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.ConnectionThreadInfo;
 import com.test.nettytest.client.pojo.GPSDataLineFromAFile;
@@ -28,6 +29,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.util.AttributeKey;
 
 public class NettyClientConnetion
 {
@@ -39,10 +41,6 @@ public class NettyClientConnetion
 	 * 管道线程集合
 	 */
 	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
-	/**
-	 * 从目录下加载到的车号队列
-	 */
-//	public ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque;
 	/**
 	 * 一共多少辆车，每辆车一个连接
 	 */
@@ -76,6 +74,12 @@ public class NettyClientConnetion
 
 	// 执行 IO 之外的业务线程
 	public ScheduledExecutorService taskService;
+	
+	/**
+	 * 设置每个 channel 的属性的键
+	 */
+	public AttributeKey<String> busIdKey = AttributeKey.valueOf("busId");
+	public AttributeKey<Boolean> isDisconnectByManualKey = AttributeKey.valueOf("isDisconnectByManual");
 
 //	public NettyClientConnetion(ConnectionThreadInfo connectionThreadInfo, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
 //	{
@@ -104,8 +108,7 @@ public class NettyClientConnetion
 		// 连接线程开始时间
 		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
 
-		SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
-		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
 
 		taskService = Executors.newScheduledThreadPool(busCount > 2 ? busCount / 2 : 1);
 //		taskService = Executors.newScheduledThreadPool(busCount);
@@ -126,7 +129,7 @@ public class NettyClientConnetion
 			{
 				ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(65535, 4, 2, 2, 0));
 //				ch.pipeline().addLast(new LoginHandler(channelThreadInfodDeque, NettyClientConnetion.this));
-//				ch.pipeline().addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, null));
+				ch.pipeline().addLast("RealDataHandler", new RealDataFromRAMHandler(channelThreadInfodDeque, NettyClientConnetion.this));
 			}
 		});
 
@@ -140,10 +143,27 @@ public class NettyClientConnetion
 
 		// 使用调度线程进行连接，每个车号一个连接
 //		for (int i = 0; i < busCount; i++)
+		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busMap.keySet().size() + "]");
+		
 		for(String busId:busMap.keySet())
-			group.schedule(() -> doConnect(busId, false), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
-					TimeUnit.SECONDS);
-//			group.schedule(() -> doConnect(busId, false), 0, TimeUnit.SECONDS);
+		{
+//			if (busId != null && !busId.isEmpty())
+//			taskService.schedule(() -> doConnect(busId, false), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
+//					TimeUnit.SECONDS);
+//		group.schedule(() -> doConnect(busId, false), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
+//				TimeUnit.SECONDS);
+			taskService.schedule(() -> doConnect(busId, false), 0, TimeUnit.SECONDS);
+			//不 sleep 的话，加载老是出现一些空加载，很不稳定。
+			try
+			{
+				TimeUnit.MILLISECONDS.sleep(1);
+			}
+			catch (InterruptedException e)
+			{
+				e.printStackTrace();
+			}
+//				doConnect(busId, false);
+		}
 
 //		for(Map.Entry<UUID, Queue<GPSDataLineFromAFile>> e:busMap.entrySet())
 //		{
@@ -189,22 +209,18 @@ public class NettyClientConnetion
 
 	public void doConnect(String busId, boolean isDisconnectByManual)
 	{
-		String host = NettyClientUtil.SERVER_IP;
-		int port = NettyClientUtil.SERVER_PORT;
-
-//		System.out.println("当前连接线程：" + Thread.currentThread().getName() + "  " + Thread.currentThread().getId());
-
-		// 尝试连接次数
-		connectionThreadInfo.setAndGetTryToConnectCount();
-
-		// System.out.println("[" + Thread.currentThread().getName() + "] [" +
-		// df.format(new Date()) + "] 准备连接 Netty Server --> " + host + ":" +
-		// port);
-
-		ChannelFuture future = bootstrap.connect(host, port);
-
-		future.addListener(new ChannelFutureListener()
+		class ConnectionFutureListener implements ChannelFutureListener
 		{
+			private String futureBusId;
+			private boolean futureIsDisconnectByManual;
+			
+			public ConnectionFutureListener(String futureBusId, boolean futureIsDisconnectByManual)
+			{
+				this.futureBusId = futureBusId;
+				this.futureIsDisconnectByManual = futureIsDisconnectByManual;
+			}
+
+			@Override
 			public void operationComplete(ChannelFuture futureListener) throws Exception
 			{
 				if (futureListener.isSuccess())
@@ -213,29 +229,31 @@ public class NettyClientConnetion
 					connectionThreadInfo.setAndGetConnectionCount();
 
 					// 根据 busId 的不同，动态增加 ChannelHandler
-					if (busId != null && !busId.isEmpty())
+					if (futureBusId != null && !futureBusId.isEmpty())
 					{
-//						futureListener.channel().pipeline().removeLast();
-						futureListener.channel().pipeline()
-							.addLast(new RealDataHandler(channelThreadInfodDeque, NettyClientConnetion.this, busId, isDisconnectByManual));
+//						System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] " + busId + " 在主线程已连接成功。");
+						
+						//给一个已经连接上的 channel 赋予一个属性，让每个 channel 可以对应一个独有的车号
+						futureListener.channel().attr(busIdKey).setIfAbsent(futureBusId);
+						futureListener.channel().attr(isDisconnectByManualKey).setIfAbsent(futureIsDisconnectByManual);
 					}
 
 					// 有一个车号连接上后，就开启检查车号集合任务，每分钟检查一次
-					if (checkBusSetTask == null)
-					{
-//						checkBusSetTask = taskService.scheduleAtFixedRate(() ->
-						checkBusSetTask = group.scheduleAtFixedRate(() ->
-						{
-							if (busSet.isEmpty())
-							{
-								checkBusSetTask.cancel(true);
-								group.shutdownGracefully();
-								System.out.println("所有的数据包已发送完毕！运行时长：" + (startTimestamp > 0
-										? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTimestamp) : "未知"));
-//								ClientMain.countDownLatch.countDown();
-							}
-						} , 1, 1, TimeUnit.MINUTES);
-					}
+//					if (checkBusSetTask == null)
+//					{
+////						checkBusSetTask = taskService.scheduleAtFixedRate(() ->
+//						checkBusSetTask = group.scheduleAtFixedRate(() ->
+//						{
+//							if (busSet.isEmpty())
+//							{
+//								checkBusSetTask.cancel(true);
+//								group.shutdownGracefully();
+//								System.out.println("所有的数据包已发送完毕！运行时长：" + (startTimestamp > 0
+//										? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTimestamp) : "未知"));
+////								ClientMain.countDownLatch.countDown();
+//							}
+//						} , 1, 1, TimeUnit.MINUTES);
+//					}
 
 //					channel = futureListener.channel();
 
@@ -259,24 +277,38 @@ public class NettyClientConnetion
 						@Override
 						public void run()
 						{
-							doConnect(busId, isDisconnectByManual);
+							doConnect(futureBusId, futureIsDisconnectByManual);
 						}
 					}, 10, TimeUnit.SECONDS);
 				}
+				
 			}
-		});
-		// }
+			
+		}
+		
+		String host = NettyClientUtil.SERVER_IP;
+		int port = NettyClientUtil.SERVER_PORT;
 
+//		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] " + busId + " 准备进行连接。");
+		
+//		try
+//		{
+//			TimeUnit.HOURS.sleep(1);
+//		}
+//		catch (InterruptedException e)
+//		{
+//			e.printStackTrace();
+//		}
+
+		// 尝试连接次数
+		connectionThreadInfo.setAndGetTryToConnectCount();
+
+		// System.out.println("[" + Thread.currentThread().getName() + "] [" +
+		// df.format(new Date()) + "] 准备连接 Netty Server --> " + host + ":" +
+		// port);
+
+		ChannelFuture future = bootstrap.connect(host, port);
+
+		future.addListener(new ConnectionFutureListener(busId, isDisconnectByManual));
 	}
-
-	// @Override
-	// public void run()
-	// {
-	// //记录线程ID
-	// threadInfo.setThreadID(Long.toString(Thread.currentThread().getId()));
-	//
-	// //记录线程开始时间
-	// threadInfo.setStartTime(System.currentTimeMillis());
-	// start();
-	// }
 }
