@@ -2,16 +2,13 @@ package com.test.nettytest.client.channelhandler;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
-import java.util.ArrayDeque;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.test.nettytest.client.NettyClientConnetion;
 import com.test.nettytest.client.RealDataFromFileConnetion;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.GPSDataLineFromAFile;
@@ -113,6 +110,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 	{
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
 		this.client = client;
+		this.isDisconnectByManual = false;
 	}
 
 	private SimpleDateFormat df = new SimpleDateFormat("HH:mm:ss");
@@ -149,7 +147,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(nextSendGpsDataLine.getGpsData()))).sync();
 
-//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息：[" + gpsDataLine.getGpsData() + "]");
+//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息：[" + nextSendGpsDataLine.getGpsData() + "]");
 //				gpsDataQueue.pollFirst();
 				// 保存已发送的包
 				lastSendGpsDataLine = nextSendGpsDataLine; // 线程级别
@@ -201,10 +199,21 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 				 */
 //				gpsDataLine = gpsDataQueue.peekFirst();
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(nextSendGpsDataLine.getGpsData()))).sync();
-//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 现在发送 ：[" + lastSendGpsDataLine.getCommand() + "]["
-//						+ lastSendGpsDataLine.getGpsData() + "]");
-				// 发送成功了，才真正的移动文件游标
-				busFileBufReader.readLine();
+//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送了 ：[" + nextSendGpsDataLine.getCommand() + "]["
+//						+ nextSendGpsDataLine.getGpsData() + "]");				
+				
+				try
+				{
+					// 发送成功了，才真正的移动文件游标
+					busFileBufReader.readLine();
+				}
+				catch (Exception e1)
+				{
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区已关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+					return;
+				}
+				
 //				if ("3".equals(gpsDataLine.getCommand()))
 //					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送了校时请求 ：[" + gpsDataLine.getGpsData() + "]");
 
@@ -222,20 +231,29 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 					client.busSendCountMap.put(busId, client.busSendCountMap.get(busId) + 1);
 				else
 					client.busSendCountMap.put(busId, 1);
-
-				// 预读下一行数据
-				busFileBufReader.mark((int) (busFile.length() + 1));
-				String lineTxt = busFileBufReader.readLine();
-				busFileBufReader.reset();
+				
+				String lineTxt;
+				try
+				{
+					// 预读下一行数据				
+					busFileBufReader.mark((int) (busFile.length() + 1));
+					lineTxt = busFileBufReader.readLine();
+					busFileBufReader.reset();
+				}
+				catch (Exception e)
+				{
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区已关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+					return;
+				}
 
 				if (lineTxt == null)
 				{
-					System.out.println(
-							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
 					// 从已连接的车号集合里，把本车号移除
 					client.busSet.remove(busId);
-					// 假如发送的包不需要应答，则可以中断连接
-//					ctx.disconnect();
+					reader.close();
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区已关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
 					return;
 				}
 
@@ -273,13 +291,14 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 					// 记录模拟断开次数
 					channelThreadInfo.incrementDisconnectInRandomTimeCount();
 
-					// 启用主线程的调度任务，通过 busId 告诉主线程，在重连后，需要提取哪个车号队列继续进行发送数据
-					client.taskService.schedule(() -> client.doConnect(busFile, true), sendInterval, TimeUnit.SECONDS);
+					
 
 //					System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 遇到了注册包，已启用调度重连。 ");
 //					System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 遇到了注册包，已启用调度重连。 ");
 					diconnectionMessage = "遇到了注册包，已启用调度重连。 ";
-
+					isDisconnectByManual = true;
+					// 启用主线程的调度任务，通过 busId 告诉主线程，在重连后，需要提取哪个车号队列继续进行发送数据
+					client.taskService.schedule(() -> client.doConnect(busFile,reader,busFileBufReader, isDisconnectByManual), sendInterval, TimeUnit.SECONDS);
 					// 需要断开重连
 					ctx.disconnect();
 				}
@@ -333,10 +352,21 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 			// 意外断开重连
 			else
 			{
-				// 从缓冲区预读出一行
-				busFileBufReader.mark((int) (busFile.length() + 1));
-				String lineTxt = busFileBufReader.readLine();
-				busFileBufReader.reset();
+				
+				String lineTxt;
+				try
+				{
+					// 从缓冲区预读出一行
+					busFileBufReader.mark((int) (busFile.length() + 1));
+					lineTxt = busFileBufReader.readLine();
+					busFileBufReader.reset();
+				}
+				catch (Exception e)
+				{
+					System.out.println(
+							"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区已关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+					return;
+				}
 
 				// 没有可以发送的数据了
 				if (lineTxt == null)
@@ -346,13 +376,14 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 									+ " 条指令。[运行时长：" + (startTime > 0 ? NettyClientUtil.getFormatTime(endTime - startTime) : "未知") + "]");
 					// 从已连接的车号集合里，把本车号移除
 					client.busSet.remove(busId);
+					reader.close();
 					// ctx.disconnect();
 
 				}
 				// 还有数据要发送
 				else
 				{
-					client.doConnect(busFile, false);
+					client.doConnect(busFile,reader,busFileBufReader, isDisconnectByManual);
 					
 					
 //					// 分析下一条数据
@@ -403,8 +434,6 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 				}
 			}
 		}
-
-		reader.close();
 	}
 
 	@Override
@@ -431,16 +460,19 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 			ctx.disconnect();
 			return;
 		}
-
-		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 已连接！");
-
+		
 		busId = busFile.getName();
 		// 连接上后，往车号集合里添加本车号，主要用于后面判断此车号的指令是否已经发送完毕
 		client.busSet.add(busId);
 		isDisconnectByManual = ctx.channel().attr(client.isDisconnectByManualKey).get();
+		System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 已连接！");
+		
+		
 
-		reader = new InputStreamReader(new FileInputStream(busFile)); // 使用默认字符集
-		busFileBufReader = new BufferedReader(reader);
+		reader = ctx.channel().attr(client.busReaderKey).get();
+		busFileBufReader = ctx.channel().attr(client.busBufferedReaderKey).get();
+		
+//		busFileBufReader.
 
 		// 预读一行
 		busFileBufReader.mark((int) (busFile.length() + 1));
@@ -473,6 +505,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 		// 此包是注册
 		if ("32".equals(strings[3]))
 		{
+			isLoginFromFile = true;
 			// 接收时间
 			nextSendGpsDataLine.setReceiveTimestamp(Long.parseLong(strings[1]));
 			// gps 原始时间
@@ -710,20 +743,31 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 					client.busSendCountMap.put(busId, 1);
 			}
 
-			// 收到注册应答后，预读出第二条要发送的数据
-			busFileBufReader.mark((int) (busFile.length() + 1));
 			// 从缓冲区读出一行
-			String lineTxt = busFileBufReader.readLine();
-			busFileBufReader.reset();
+			String lineTxt;
+			try
+			{
+				// 收到注册应答后，预读出第二条要发送的数据
+				busFileBufReader.mark((int) (busFile.length() + 1));
+				lineTxt = busFileBufReader.readLine();
+				busFileBufReader.reset();
+			}
+			catch (Exception e)
+			{
+				System.out.println(
+						"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区已关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+				return;
+			}
 
 			// 只有一个注册包的情况下发生
 			if (lineTxt == null)
 			{
 				System.out.println(
-						"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
+						"[" + busId + "] [" + df.format(new Date()) + "] 所有的包已发完，缓冲区即将关闭。发送了 " + client.busSendCountMap.get(busId) + " 条指令。");
 				// 从已连接的车号集合里，把本车号移除
 				client.busSet.remove(busId);
 				// ctx.disconnect();
+				reader.close();
 				return;
 			}
 

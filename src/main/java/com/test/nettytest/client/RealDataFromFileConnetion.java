@@ -17,6 +17,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.omg.CORBA.PRIVATE_MEMBER;
+
 import com.test.nettytest.client.channelhandler.RealDataFromFileStreamHandler;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
 import com.test.nettytest.client.pojo.ConnectionThreadInfo;
@@ -91,6 +93,9 @@ public class RealDataFromFileConnetion
 //	public AttributeKey<String> busIdKey = AttributeKey.valueOf("busId");
 	public AttributeKey<Boolean> isDisconnectByManualKey = AttributeKey.valueOf("isDisconnectByManual");
 	public AttributeKey<File> busFileKey = AttributeKey.valueOf("busFile");
+	public AttributeKey<InputStreamReader> busReaderKey = AttributeKey.valueOf("busReader");
+	public AttributeKey<BufferedReader> busBufferedReaderKey = AttributeKey.valueOf("busBufferedReader");
+	
 //	public AttributeKey<InputStreamReader> busReaderKey = AttributeKey.valueOf("busReader");
 	
 	
@@ -162,14 +167,23 @@ public class RealDataFromFileConnetion
 //					TimeUnit.SECONDS);
 //		group.schedule(() -> doConnect(busId, false), (long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)),
 //				TimeUnit.SECONDS);
-			taskService.schedule(() -> doConnect(oneBusFile, false), 0, TimeUnit.SECONDS);			
-						
-			//不 sleep 的话，加载老是出现一些空加载，很不稳定。
 			try
 			{
-				TimeUnit.MILLISECONDS.sleep(1);
+				InputStreamReader reader = new InputStreamReader(new FileInputStream(oneBusFile)); // 使用默认字符集
+				BufferedReader bufferedReader = new BufferedReader(reader);
+				taskService.schedule(() -> doConnect(oneBusFile,reader,bufferedReader,false), 0, TimeUnit.SECONDS);
+							
+				//不 sleep 的话，加载老是出现一些空加载，很不稳定。
+				try
+				{
+					TimeUnit.MILLISECONDS.sleep(1);
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
 			}
-			catch (InterruptedException e)
+			catch (FileNotFoundException e)
 			{
 				e.printStackTrace();
 			}
@@ -218,16 +232,20 @@ public class RealDataFromFileConnetion
 		// }
 	}
 
-	public void doConnect(File oneBusFile, boolean isDisconnectByManual)
+	public void doConnect(File oneBusFile,InputStreamReader reader,BufferedReader bufferedReader, boolean isDisconnectByManual)
 	{
 		class ConnectionFutureListener implements ChannelFutureListener
 		{
 			private File futureBusFile;
+			private InputStreamReader futureReader;
+			private BufferedReader futureBufferedReader;
 			private boolean futureIsDisconnectByManual;
 			
-			public ConnectionFutureListener(File futureBusFile, boolean futureIsDisconnectByManual)
+			public ConnectionFutureListener(File futureBusFile,InputStreamReader futureReader,BufferedReader futureBufferedReader, boolean futureIsDisconnectByManual)
 			{
 				this.futureBusFile = futureBusFile;
+				this.futureReader = futureReader;
+				this.futureBufferedReader = futureBufferedReader;
 				this.futureIsDisconnectByManual = futureIsDisconnectByManual;
 			}
 
@@ -244,9 +262,9 @@ public class RealDataFromFileConnetion
 //						System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] " + busId + " 在主线程已连接成功。");
 						
 						//给一个已经连接上的 channel 赋予一个属性，让每个 channel 可以对应一个独有的车号						
-//						futureListener.channel().attr(busIdKey).setIfAbsent(oneBusFile.getName());
 						futureListener.channel().attr(busFileKey).setIfAbsent(futureBusFile);
-//						futureListener.channel().attr(busFileBufReaderKey).setIfAbsent(bufferedReader);
+						futureListener.channel().attr(busReaderKey).setIfAbsent(futureReader);
+						futureListener.channel().attr(busBufferedReaderKey).setIfAbsent(futureBufferedReader);
 						futureListener.channel().attr(isDisconnectByManualKey).setIfAbsent(futureIsDisconnectByManual);
 					}
 
@@ -279,7 +297,7 @@ public class RealDataFromFileConnetion
 						@Override
 						public void run()
 						{
-							doConnect(futureBusFile, futureIsDisconnectByManual);
+							doConnect(futureBusFile,futureReader,futureBufferedReader, futureIsDisconnectByManual);
 						}
 					}, 10, TimeUnit.SECONDS);
 				}
@@ -307,6 +325,6 @@ public class RealDataFromFileConnetion
 		
 		ChannelFuture future = bootstrap.connect(host, port);
 
-		future.addListener(new ConnectionFutureListener(oneBusFile, isDisconnectByManual));
+		future.addListener(new ConnectionFutureListener(oneBusFile,reader,bufferedReader, isDisconnectByManual));
 	}
 }

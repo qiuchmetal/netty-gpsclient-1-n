@@ -29,19 +29,17 @@ public class ClientMain
 
 	public static void main(String[] args)
 	{
-		System.out.println("开始加载车号文件。");
-//		ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>> busDeque = new ConcurrentLinkedDeque<Queue<GPSDataLineFromAFile>>();
-//		loadBusInfo(busDeque);
-		ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>> busMap = new ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>>();
-		loadBusInfo(busMap);
-
-		if (busCount < 1)
-		{
-			System.out.println("无车号文件可加载。");
-			return;
-		}
-
-		System.out.println("成功加载了 " + busCount + " 个车号文件，一共有 " + packageCount + " 个数据包。");
+//		System.out.println("开始加载车号文件。");
+//		ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>> busMap = new ConcurrentHashMap<String, ArrayDeque<GPSDataLineFromAFile>>();
+//		loadBusInfo(busMap);
+//
+//		if (busCount < 1)
+//		{
+//			System.out.println("无车号文件可加载。");
+//			return;
+//		}
+//
+//		System.out.println("成功加载了 " + busCount + " 个车号文件，一共有 " + packageCount + " 个数据包。");
 
 //		int i = 0;
 //		while (!busDeque.isEmpty())
