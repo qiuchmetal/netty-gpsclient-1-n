@@ -8,16 +8,13 @@ import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.Date;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
-import org.omg.CORBA.PRIVATE_MEMBER;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.test.nettytest.client.channelhandler.RealDataFromFileStreamHandler;
 import com.test.nettytest.client.pojo.ChannelThreadInfo;
@@ -70,13 +67,22 @@ public class RealDataFromFileConnetion
 	/**
 	 * 已连接的车号集合，用于检查数据包是否已经发完
 	 */
-	public Set<String> busSet = new ConcurrentSkipListSet<String>();
+//	public Set<String> busSet = new ConcurrentSkipListSet<String>();
 	/**
 	 * 根据加载文件的目录，获取 File
 	 */
 	private File fileDir;
+	/**
+	 * 第一次进行连接的车号总数
+	 */
+	public AtomicInteger busInFirstActiveCount = new AtomicInteger(0);
+	/**
+	 * 完成所有发送任务的车号总数
+	 */
+	public AtomicInteger busSendCount = new AtomicInteger(0);
+//	public final CountDownLatch busSendCountDownLatch;
 
-	private volatile ScheduledFuture<?> checkBusSetTask; // 检查车号集合是否为空
+//	private volatile ScheduledFuture<?> checkBusSetTask; // 检查车号集合是否为空
 
 	private long startTimestamp; // 开始运行
 
@@ -86,36 +92,35 @@ public class RealDataFromFileConnetion
 
 	// 执行 IO 之外的业务线程
 	public ScheduledExecutorService taskService;
-	
+
 	/**
 	 * 设置每个 channel 的属性的键
 	 */
 //	public AttributeKey<String> busIdKey = AttributeKey.valueOf("busId");
 	public AttributeKey<Boolean> isDisconnectByManualKey = AttributeKey.valueOf("isDisconnectByManual");
+	public AttributeKey<Boolean> isFirstActiveKey = AttributeKey.valueOf("isFirstActive");
 	public AttributeKey<File> busFileKey = AttributeKey.valueOf("busFile");
 	public AttributeKey<InputStreamReader> busReaderKey = AttributeKey.valueOf("busReader");
 	public AttributeKey<BufferedReader> busBufferedReaderKey = AttributeKey.valueOf("busBufferedReader");
-	
+
 //	public AttributeKey<InputStreamReader> busReaderKey = AttributeKey.valueOf("busReader");
-	
-	
-	
-	public RealDataFromFileConnetion(ConnectionThreadInfo connectionThreadInfo
-			, ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque
-			, String filePath)
+
+	public RealDataFromFileConnetion(ConnectionThreadInfo connectionThreadInfo,
+			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque, String filePath)
 	{
 		this.connectionThreadInfo = connectionThreadInfo;
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
-		
+
 		this.fileDir = new File(filePath);
 		if (fileDir.isDirectory())
 			this.busCount = fileDir.listFiles().length;
-		
+//		this.busSendCountDownLatch = new CountDownLatch(busCount);
+
 		// 连接线程开始时间
 		this.connectionThreadInfo.setStartTime(System.currentTimeMillis());
-		
+
 //		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
-		
+
 		taskService = Executors.newScheduledThreadPool(busCount > 2 ? busCount / 2 : 1);
 //		taskService = Executors.newScheduledThreadPool(busCount);
 	}
@@ -127,8 +132,7 @@ public class RealDataFromFileConnetion
 			System.out.println("无车号文件可加载。");
 			return;
 		}
-		
-		
+
 		// EventLoopGroup group = new NioEventLoopGroup();
 		bootstrap = new Bootstrap();
 		bootstrap.group(group);
@@ -156,8 +160,7 @@ public class RealDataFromFileConnetion
 		// 使用调度线程进行连接，每个车号一个连接
 //		for (int i = 0; i < busCount; i++)
 		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 即将开启的连接数：[" + busCount + "]");
-		
-		
+
 		// 循环，对单个文件进行操作
 		File[] busFiles = fileDir.listFiles();
 		for (File oneBusFile : busFiles)
@@ -171,17 +174,19 @@ public class RealDataFromFileConnetion
 			{
 				InputStreamReader reader = new InputStreamReader(new FileInputStream(oneBusFile)); // 使用默认字符集
 				BufferedReader bufferedReader = new BufferedReader(reader);
-				taskService.schedule(() -> doConnect(oneBusFile,reader,bufferedReader,false), 0, TimeUnit.SECONDS);
-							
-				//不 sleep 的话，加载老是出现一些空加载，很不稳定。
-				try
-				{
-					TimeUnit.MILLISECONDS.sleep(1);
-				}
-				catch (InterruptedException e)
-				{
-					e.printStackTrace();
-				}
+				taskService.schedule(() -> doConnect(oneBusFile, reader, bufferedReader, true, false),
+						(long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
+//				doConnect(oneBusFile, reader, bufferedReader, false);
+
+				// 不 sleep 的话，加载老是出现一些空加载，很不稳定。
+//				try
+//				{
+//					TimeUnit.MILLISECONDS.sleep(10);
+//				}
+//				catch (InterruptedException e)
+//				{
+//					e.printStackTrace();
+//				}
 			}
 			catch (FileNotFoundException e)
 			{
@@ -189,6 +194,17 @@ public class RealDataFromFileConnetion
 			}
 //				doConnect(busId, false);
 		}
+
+//		try
+//		{
+//			busSendCountDownLatch.await();
+//			System.out.println("所有的数据包已发送完毕！运行时长："
+//					+ (startTimestamp > 0 ? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTimestamp) : "未知"));
+//		}
+//		catch (InterruptedException e)
+//		{
+//			e.printStackTrace();
+//		}
 
 //		for(Map.Entry<UUID, Queue<GPSDataLineFromAFile>> e:busMap.entrySet())
 //		{
@@ -232,20 +248,24 @@ public class RealDataFromFileConnetion
 		// }
 	}
 
-	public void doConnect(File oneBusFile,InputStreamReader reader,BufferedReader bufferedReader, boolean isDisconnectByManual)
+	public void doConnect(File oneBusFile, InputStreamReader reader, BufferedReader bufferedReader, boolean isFirstActive,
+			boolean isDisconnectByManual)
 	{
 		class ConnectionFutureListener implements ChannelFutureListener
 		{
 			private File futureBusFile;
 			private InputStreamReader futureReader;
 			private BufferedReader futureBufferedReader;
+			private boolean futureIsFirstActive;
 			private boolean futureIsDisconnectByManual;
-			
-			public ConnectionFutureListener(File futureBusFile,InputStreamReader futureReader,BufferedReader futureBufferedReader, boolean futureIsDisconnectByManual)
+
+			public ConnectionFutureListener(File futureBusFile, InputStreamReader futureReader, BufferedReader futureBufferedReader,
+					boolean futureIsFirstActive, boolean futureIsDisconnectByManual)
 			{
 				this.futureBusFile = futureBusFile;
 				this.futureReader = futureReader;
 				this.futureBufferedReader = futureBufferedReader;
+				this.futureIsFirstActive = futureIsFirstActive;
 				this.futureIsDisconnectByManual = futureIsDisconnectByManual;
 			}
 
@@ -260,29 +280,29 @@ public class RealDataFromFileConnetion
 					if (futureBusFile != null)
 					{
 //						System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] " + busId + " 在主线程已连接成功。");
-						
-						//给一个已经连接上的 channel 赋予一个属性，让每个 channel 可以对应一个独有的车号						
+
+						// 给一个已经连接上的 channel 赋予一个属性，让每个 channel 可以对应一个独有的车号
 						futureListener.channel().attr(busFileKey).setIfAbsent(futureBusFile);
 						futureListener.channel().attr(busReaderKey).setIfAbsent(futureReader);
 						futureListener.channel().attr(busBufferedReaderKey).setIfAbsent(futureBufferedReader);
+						futureListener.channel().attr(isFirstActiveKey).setIfAbsent(futureIsFirstActive);
 						futureListener.channel().attr(isDisconnectByManualKey).setIfAbsent(futureIsDisconnectByManual);
 					}
 
-					// 有一个车号连接上后，就开启检查车号集合任务，每分钟检查一次
+//					// 有一个车号连接上后，就开启检查车号集合任务，每5分钟检查一次
 //					if (checkBusSetTask == null)
 //					{
-////						checkBusSetTask = taskService.scheduleAtFixedRate(() ->
-//						checkBusSetTask = group.scheduleAtFixedRate(() ->
+//						checkBusSetTask = taskService.scheduleAtFixedRate(() ->
 //						{
 //							if (busSet.isEmpty())
 //							{
 //								checkBusSetTask.cancel(true);
-//								group.shutdownGracefully();
+////								group.shutdownGracefully();
 //								System.out.println("所有的数据包已发送完毕！运行时长：" + (startTimestamp > 0
 //										? NettyClientUtil.getFormatTime(System.currentTimeMillis() - startTimestamp) : "未知"));
 ////								ClientMain.countDownLatch.countDown();
 //							}
-//						} , 1, 1, TimeUnit.MINUTES);
+//						} , 5, 5, TimeUnit.MINUTES);
 //					}
 				}
 				else
@@ -297,20 +317,20 @@ public class RealDataFromFileConnetion
 						@Override
 						public void run()
 						{
-							doConnect(futureBusFile,futureReader,futureBufferedReader, futureIsDisconnectByManual);
+							doConnect(futureBusFile, futureReader, futureBufferedReader, futureIsFirstActive, futureIsDisconnectByManual);
 						}
 					}, 10, TimeUnit.SECONDS);
 				}
-				
+
 			}
-			
+
 		}
-		
+
 		String host = NettyClientUtil.SERVER_IP;
 		int port = NettyClientUtil.SERVER_PORT;
 
 //		System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] " + busId + " 准备进行连接。");
-		
+
 //		try
 //		{
 //			TimeUnit.HOURS.sleep(1);
@@ -322,9 +342,9 @@ public class RealDataFromFileConnetion
 
 		// 尝试连接次数
 		connectionThreadInfo.setAndGetTryToConnectCount();
-		
+
 		ChannelFuture future = bootstrap.connect(host, port);
 
-		future.addListener(new ConnectionFutureListener(oneBusFile,reader,bufferedReader, isDisconnectByManual));
+		future.addListener(new ConnectionFutureListener(oneBusFile, reader, bufferedReader, isFirstActive, isDisconnectByManual));
 	}
 }

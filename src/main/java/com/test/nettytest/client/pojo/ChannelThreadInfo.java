@@ -1,6 +1,7 @@
 package com.test.nettytest.client.pojo;
 
 import java.text.SimpleDateFormat;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.test.nettytest.client.util.NettyClientUtil;
 
@@ -52,11 +53,11 @@ public class ChannelThreadInfo
 	/**
 	 * 断开次数
 	 */
-	private int disconnectionCount = 0;
+	private AtomicInteger disconnectionCount = new AtomicInteger(0);
 	/**
 	 * 模拟断开次数
 	 */
-	private int disconnectInRandomTimeCount = 0;
+	private AtomicInteger disconnectInRandomTimeCount = new AtomicInteger(0);
 	/**
 	 * 因没及时收到心跳而断开次数
 	 */
@@ -71,39 +72,39 @@ public class ChannelThreadInfo
 	/**
 	 * 发送的注册包个数
 	 */
-	private int loginCount = 0;
+	private AtomicInteger loginCount = new AtomicInteger(0);
 	/**
 	 * 接收的注册应答包个数
 	 */
-	private int loginResponseCount = 0;
+	private AtomicInteger loginResponseCount = new AtomicInteger(0);
 	/**
 	 * 发送的准备就绪包个数
 	 */
-	private int inReadyCount = 0;
+	private AtomicInteger inReadyCount = new AtomicInteger(0);
 	/**
 	 * 发送的定时定距包个数
 	 */
-	private int timingCount = 0;
+	private AtomicInteger timingCount = new AtomicInteger(0);
 	/**
 	 * 发送的校时请求包个数
 	 */
-	private int adjustTimeCount = 0;
+	private AtomicInteger adjustTimeCount = new AtomicInteger(0);
 	/**
 	 * 接收到的校时应答包个数
 	 */
-	private int adjustTimeResponseCount = 0;
+	private AtomicInteger adjustTimeResponseCount = new AtomicInteger(0);
 	/**
 	 * 发送的关键数据包个数
 	 */
-	private int abnormalCount = 0;
+	private AtomicInteger abnormalCount = new AtomicInteger(0);
 	/**
 	 * 接收到的关键数据应答包个数
 	 */
-	private int abnormalResponseCount = 0;
+	private AtomicInteger abnormalResponseCount = new AtomicInteger(0);
 	/**
 	 * 接收到的心跳个数
 	 */
-	private int heartBeatCount = 0;
+	private AtomicInteger heartBeatCount = new AtomicInteger(0);
 	/*
 	 ***************************************************
 	 */
@@ -180,7 +181,7 @@ public class ChannelThreadInfo
 
 	public final int getDisconnectionCount()
 	{
-		return disconnectionCount;
+		return disconnectionCount.get();
 	}
 
 //	public final void setDisconnectionCount(int disconnectionCount)
@@ -190,12 +191,12 @@ public class ChannelThreadInfo
 
 	public final void incrementDisconnectionCount()
 	{
-		this.disconnectionCount++;
+		this.disconnectionCount.incrementAndGet();
 	}
 
 	public final int getDisconnectInRandomTimeCount()
 	{
-		return disconnectInRandomTimeCount;
+		return disconnectInRandomTimeCount.get();
 	}
 
 //	public final void setDisconnectInRandomTimeCount(int disconnectInRandomTimeCount)
@@ -205,7 +206,7 @@ public class ChannelThreadInfo
 
 	public final void incrementDisconnectInRandomTimeCount()
 	{
-		this.disconnectInRandomTimeCount++;
+		this.disconnectInRandomTimeCount.incrementAndGet();
 	}
 
 	public final int getDisconnectionOfHeartBeatCount()
@@ -234,92 +235,92 @@ public class ChannelThreadInfo
 
 	public final int getLoginCount()
 	{
-		return loginCount;
+		return loginCount.get();
 	}
 
 	public final void incrementLoginCount()
 	{
-		this.loginCount++;
+		this.loginCount.incrementAndGet();
 	}
 
 	public final int getLoginResponseCount()
 	{
-		return loginResponseCount;
+		return loginResponseCount.get();
 	}
 
 	public final void incrementLoginResponseCount()
 	{
-		this.loginResponseCount++;
+		this.loginResponseCount.incrementAndGet();
 	}
 
 	public final int getTimingCount()
 	{
-		return timingCount;
+		return timingCount.get();
 	}
 
 	public final void incrementTimingCount()
 	{
-		this.timingCount++;
+		this.timingCount.incrementAndGet();
 	}
 
 	public final int getAbnormalCount()
 	{
-		return abnormalCount;
+		return abnormalCount.get();
 	}
 
 	public final void incrementAbnormalCount()
 	{
-		this.abnormalCount++;
+		this.abnormalCount.incrementAndGet();
 	}
 
 	public final int getAbnormalResponseCount()
 	{
-		return abnormalResponseCount;
+		return abnormalResponseCount.get();
 	}
 
 	public final void incrementAbnormalResponseCount()
 	{
-		this.abnormalResponseCount++;
+		this.abnormalResponseCount.incrementAndGet();
 	}
 
 	public final int getAdjustTimeCount()
 	{
-		return adjustTimeCount;
+		return adjustTimeCount.get();
 	}
 
 	public final void incrementAdjustTimeCount()
 	{
-		this.adjustTimeCount++;
+		this.adjustTimeCount.incrementAndGet();
 	}
 
 	public final int getAdjustTimeResponseCount()
 	{
-		return adjustTimeResponseCount;
+		return adjustTimeResponseCount.get();
 	}
 
 	public final void incrementAdjustTimeResponseCount()
 	{
-		this.adjustTimeResponseCount++;
+		this.adjustTimeResponseCount.incrementAndGet();
 	}
 
 	public final int getHeartBeatCount()
 	{
-		return heartBeatCount;
+		return heartBeatCount.get();
 	}
 
 	public final void incrementHeartBeatCount()
 	{
-		this.heartBeatCount++;
+		this.heartBeatCount.incrementAndGet();
 	}
 	
 	public final int getInReadyCount()
 	{
-		return inReadyCount;
+		return inReadyCount.get();
 	}
 
 	public final void incrementInReadyCount()
 	{
-		this.inReadyCount++;
+		this.inReadyCount.incrementAndGet();
 	}
 	
 
@@ -331,22 +332,22 @@ public class ChannelThreadInfo
 		switch (command)
 		{
 		case "3": // 校时请求
-			this.adjustTimeCount++;
+			this.adjustTimeCount.incrementAndGet();
 			break;
 		case "-125":// 校时应答
-			this.adjustTimeResponseCount++;
+			this.adjustTimeResponseCount.incrementAndGet();
 			break;
 		case "32": // 注册请求
-			this.loginCount++;
+			this.loginCount.incrementAndGet();
 			break;
 		case "-96":// 注册应答
-			this.loginResponseCount++;
+			this.loginResponseCount.incrementAndGet();
 			break;
 		case "64": // 准备就绪
-			this.inReadyCount++;
+			this.inReadyCount.incrementAndGet();
 			break;
 		case "65": // 定时定距
-			this.timingCount++;
+			this.timingCount.incrementAndGet();
 			break;
 		case "66": // 关键数据：到站、离站信息
 		case "67": // 关键数据：到离始发站、终点站信息
@@ -354,13 +355,13 @@ public class ChannelThreadInfo
 		case "69": // 关键数据：终端异常报警信息
 		case "70": // 关键数据：请求及报告信息发送
 		case "72": // 关键数据：IC卡操作信息
-			this.abnormalCount++;
+			this.abnormalCount.incrementAndGet();
 			break;
 		case "-63": // 关键数据应答
-			this.abnormalResponseCount++;
+			this.abnormalResponseCount.incrementAndGet();
 			break;
 		case "1": //接收到的心跳
-			this.heartBeatCount++;
+			this.heartBeatCount.incrementAndGet();
 			break;
 		}
 

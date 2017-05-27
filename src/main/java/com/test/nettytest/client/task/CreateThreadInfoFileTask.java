@@ -27,8 +27,8 @@ public class CreateThreadInfoFileTask implements Runnable
 	 */
 	private ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque;
 	
-	private CountDownLatch countDownLatch;
-	private ScheduledFuture<?> createThreadInfoFileTask;
+//	private CountDownLatch countDownLatch;
+//	private ScheduledFuture<?> createThreadInfoFileTask;
 
 	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo,
 			ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque)
@@ -37,15 +37,15 @@ public class CreateThreadInfoFileTask implements Runnable
 		this.channelThreadInfodDeque = channelThreadInfodDeque;
 	}
 	
-	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo
-			,ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque
-			,CountDownLatch countDownLatch, ScheduledFuture<?> createThreadInfoFileTask)
-	{
-		this.connectionThreadInfo = connectionThreadInfo;
-		this.channelThreadInfodDeque = channelThreadInfodDeque;
-		this.countDownLatch = countDownLatch;
-		this.createThreadInfoFileTask = createThreadInfoFileTask;
-	}
+//	public CreateThreadInfoFileTask(ConnectionThreadInfo connectionThreadInfo
+//			,ConcurrentLinkedDeque<ChannelThreadInfo> channelThreadInfodDeque
+//			,CountDownLatch countDownLatch, ScheduledFuture<?> createThreadInfoFileTask)
+//	{
+//		this.connectionThreadInfo = connectionThreadInfo;
+//		this.channelThreadInfodDeque = channelThreadInfodDeque;
+//		this.countDownLatch = countDownLatch;
+//		this.createThreadInfoFileTask = createThreadInfoFileTask;
+//	}
 
 	/**
 	 * 对线程信息列表进行统计
