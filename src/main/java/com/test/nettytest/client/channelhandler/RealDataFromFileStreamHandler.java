@@ -160,6 +160,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 				// 发送的注册包是指令包里的第一条指令，需要使用当前时间来初始化注册包里的 GPS 时间
 //				if (!isDisconnectByManual)
 //					nextSendGpsDataLine.updateGpsDataByTimestamp(System.currentTimeMillis());
+				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息：[" + nextSendGpsDataLine.getGpsData() + "]");
 				sendingCount++;
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(nextSendGpsDataLine.getGpsData())))
 						.addListener(new ChannelFutureListener()
@@ -180,7 +181,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 							}
 						});
 
-//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送注册信息：[" + nextSendGpsDataLine.getGpsData() + "]");
+				
 //				gpsDataQueue.pollFirst();
 
 //				System.out.println("[" + Thread.currentThread().getName() + "] [" + df.format(new Date()) + "] 发送注册信息！-->>");
@@ -225,6 +226,9 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 				 * 
 				 */
 
+				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送了 ：[" + nextSendGpsDataLine.getCommand() + "]["
+						+ nextSendGpsDataLine.getGpsData() + "]");
+				
 				sendingCount++;
 				ctx.writeAndFlush(Unpooled.copiedBuffer(NettyClientUtil.hexStringToByteArray(nextSendGpsDataLine.getGpsData())))
 						.addListener(new ChannelFutureListener()
@@ -373,8 +377,7 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 								}
 							}
 						});
-//				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 发送了 ：[" + nextSendGpsDataLine.getCommand() + "]["
-//						+ nextSendGpsDataLine.getGpsData() + "]");				
+				
 
 			}
 			catch (Exception e)
@@ -714,6 +717,9 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 			{
 				System.out.println("[" + busId + "] [" + df.format(new Date()) + "] 第一次连接！目前已连接 "
 						+ client.busInFirstActiveCount.incrementAndGet() + " 个车号。");
+				// 立即注册，发送就间隔选取配置文件中的设置
+				logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx), 0, NettyClientUtil.LOGIN_INTERVAL,
+						TimeUnit.SECONDS);
 			}
 			// 之前遇到了注册包，调度中断后的重连，那么当前的包应该是注册包，逻辑上不会走到这步
 			else if (isDisconnectByManual)
@@ -748,6 +754,8 @@ public class RealDataFromFileStreamHandler extends ChannelInboundHandlerAdapter
 					// 下一包要使用参考上一包来更新 GPS 里的时间
 					updateGpsTimeByCurrentTime = false;
 				}
+				// 立即注册，发送就间隔要短，这里采用 2 秒
+				logInTask = client.taskService.scheduleWithFixedDelay(new LogInTask(ctx), 0, 2, TimeUnit.SECONDS);
 			}
 			// 非正常中断后的重连
 			else

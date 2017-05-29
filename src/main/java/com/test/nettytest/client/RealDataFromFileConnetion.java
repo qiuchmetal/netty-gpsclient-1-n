@@ -174,9 +174,9 @@ public class RealDataFromFileConnetion
 			{
 				InputStreamReader reader = new InputStreamReader(new FileInputStream(oneBusFile)); // 使用默认字符集
 				BufferedReader bufferedReader = new BufferedReader(reader);
-				taskService.schedule(() -> doConnect(oneBusFile, reader, bufferedReader, true, false),
-						(long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
-//				doConnect(oneBusFile, reader, bufferedReader, false);
+//				taskService.schedule(() -> doConnect(oneBusFile, reader, bufferedReader, true, false),
+//						(long) (NettyClientUtil.LOGIN_TIMEOUT * 60 * (Math.random() * 0.9 + 0.1)), TimeUnit.SECONDS);
+				taskService.schedule(() -> doConnect(oneBusFile, reader, bufferedReader, true, false),0, TimeUnit.SECONDS);
 
 				// 不 sleep 的话，加载老是出现一些空加载，很不稳定。
 //				try
