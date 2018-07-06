@@ -1,0 +1,1 @@
+java -cp target\netty-gpsclient-1-n-1.2.jar com.test.nettytest.client.ClientMain > 1k_log_01.txt
